@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import Footer from './Footer';
 
 const SignupBasic = () => {
+  const history = useHistory();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -11,6 +12,7 @@ const SignupBasic = () => {
     confirmPassword: '',
     termsAccepted: false
   });
+  const [termsError, setTermsError] = useState('');
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -22,9 +24,14 @@ const SignupBasic = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.termsAccepted) {
+      setTermsError('Please accept our Terms and Conditions.');
+      return;
+    }
     // Handle form submission
     console.log('Form submitted:', formData);
     alert('Account created successfully!');
+    history.push('/');
   };
 
   return (
@@ -152,18 +159,23 @@ const SignupBasic = () => {
 
                 <div className="form-check mb-4">
                   <input 
-                    className="form-check-input" 
+                    className={`form-check-input ${termsError ? 'is-invalid' : ''}`} 
                     type="checkbox" 
                     id="termsCheckbox" 
                     name="termsAccepted"
                     required 
                     checked={formData.termsAccepted}
-                    onChange={handleChange}
+                    onChange={(e) => {
+                      handleChange(e);
+                      if (e.target.checked) {
+                        setTermsError('');
+                      }
+                    }}
                   />
                   <label className="form-check-label" htmlFor="termsCheckbox">
                     I accept the <Link to="/terms-and-conditions">Terms and Conditions</Link>
                   </label>
-                  <span className="invalid-feedback">Please accept our Terms and Conditions.</span>
+                  {termsError && <div className="invalid-feedback">{termsError}</div>}
                 </div>
 
                 <div className="d-grid gap-2">
