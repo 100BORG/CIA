@@ -1,32 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { jsPDF } from 'jspdf';
+import React, { useState, useRef, useEffect } from 'react';
 import html2canvas from 'html2canvas';
-import emailjs from '@emailjs/browser'; // Updated import
-
-import InvoiceForm from './InvoiceForm';
-import InvoicePreview from '../InvoicePreview/InvoicePreview';
-import { formatDate, formatDateForInput } from '../../utils/dateUtils';
-
-import './InvoiceGenerator.css';
+import { jsPDF } from 'jspdf';
+import emailjs from 'emailjs-com';
+import InvoiceForm from '../../../components/invoice/InvoiceForm';
+import InvoicePreview from '../../../components/invoice/InvoicePreview';
 
 function InvoiceGenerator({ onSignOut }) {
-  // Initialize EmailJS - no init needed with @emailjs/browser
-  useEffect(() => {
-    // emailjs.init no longer needed with @emailjs/browser
-  }, []);
-
   const [showPreview, setShowPreview] = useState(false);
   const invoicePreviewRef = useRef(null);
-  
-  // Invoice state
   const [invoiceData, setInvoiceData] = useState({
-    // Initialize with default values
     invoiceNumber: generateInvoiceNumber(),
     invoiceDate: formatDateForInput(new Date()),
-    currency: 'USD ($)',
+    dueDate: '',
+    currency: 'USD / INR',
     taxRate: '0',
-    senderName: 'Suprayoga Solutions LLP',
-    senderAddress: 'K No 1117.88 SY No 022/1,\nBelathur Village Kadugodi,\nBangalore, KA - 560067',
+    senderName: '',
+    senderEmail: '',
+    senderAddress: '',
+    senderPhone: '',
     senderGSTIN: 'GSTIN : ',
     recipientName: '',
     recipientEmail: '',
@@ -34,10 +25,11 @@ function InvoiceGenerator({ onSignOut }) {
     recipientPhone: '',
     recipientGSTIN: 'GSTIN : ',
     recipientPAN: 'PAN No :',
-    notes: 'Account Name: Suprayoga Solutions LLP\nBank Name: Yes Bank Limited\nAccount Number: 1111111111\nIFSC Code: 11111',
+    notes: 'Account Name:\nBank Name:\nAccount Number:\nIFSC Code:',
+    companyLogo: '',
     items: [
       {
-        id: 1,
+        id: Date.now(),
         name: '',
         description: '',
         amountUSD: 0,
@@ -51,23 +43,27 @@ function InvoiceGenerator({ onSignOut }) {
     taxAmountUSD: 0,
     taxAmountINR: 0,
     totalUSD: 0,
-    totalINR: 0,
-    companyLogo: null
+    totalINR: 0
   });
 
-  // Generate a new invoice number
+  // Helper functions
   function generateInvoiceNumber() {
-    const currentYear = new Date().getFullYear();
-    let lastInvoiceNumber = parseInt(localStorage.getItem('lastInvoiceNumber')) || 0;
-    lastInvoiceNumber += 1;
-    localStorage.setItem('lastInvoiceNumber', lastInvoiceNumber);
-    return `${currentYear}-${lastInvoiceNumber}`;
+    return `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
   }
 
-  // Update calculations when items or tax rate change
-  useEffect(() => {
-    updateCalculations();
-  }, [invoiceData.items, invoiceData.taxRate]);
+  function formatDateForInput(date) {
+    return date.toISOString().split('T')[0];
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  }
 
   // Update calculations
   const updateCalculations = () => {
@@ -139,47 +135,44 @@ function InvoiceGenerator({ onSignOut }) {
   };
 
   const addNestedItem = (parentId) => {
-    const newItem = {
-      id: Date.now(),
-      name: '',
-      description: '',
-      amountUSD: 0,
-      amountINR: 0,
-      isNested: true,
-      parentId
-    };
-    
-    const parentIndex = invoiceData.items.findIndex(item => item.id === parentId);
+    const newItems = [...invoiceData.items];
+    const parentIndex = newItems.findIndex(item => item.id === parentId);
     
     if (parentIndex !== -1) {
-      const newItems = [...invoiceData.items];
-      newItems.splice(parentIndex + 1, 0, newItem);
-      
-      setInvoiceData(prevData => ({
-        ...prevData,
-        items: newItems
-      }));
-    }
-  };
-
-  const removeItem = (id) => {
-    // Remove the item and any nested items
-    const newItems = invoiceData.items.filter(
-      item => item.id !== id && item.parentId !== id
-    );
-    
-    if (newItems.length === 0) {
-      // Always keep at least one item
-      newItems.push({
+      const newItem = {
         id: Date.now(),
         name: '',
         description: '',
         amountUSD: 0,
         amountINR: 0,
-        isNested: false,
-        parentId: null
-      });
+        isNested: true,
+        parentId
+      };
+      
+      newItems.splice(parentIndex + 1, 0, newItem);
     }
+    
+    setInvoiceData(prevData => ({
+      ...prevData,
+      items: newItems
+    }));
+  };
+
+  const removeItem = (id) => {
+    // First, remove any nested items
+    const itemsToRemove = [id];
+    const findNestedItems = (parentId) => {
+      invoiceData.items.forEach(item => {
+        if (item.parentId === parentId) {
+          itemsToRemove.push(item.id);
+          findNestedItems(item.id);
+        }
+      });
+    };
+    
+    findNestedItems(id);
+    
+    const newItems = invoiceData.items.filter(item => !itemsToRemove.includes(item.id));
     
     setInvoiceData(prevData => ({
       ...prevData,
@@ -327,6 +320,11 @@ function InvoiceGenerator({ onSignOut }) {
     }
   };
 
+  // Update calculations whenever items or tax rate changes
+  useEffect(() => {
+    updateCalculations();
+  }, [invoiceData.items, invoiceData.taxRate]);
+
   return (
     <>
       <div className="container">
@@ -349,15 +347,18 @@ function InvoiceGenerator({ onSignOut }) {
           onAddNestedItem={addNestedItem}
           onRemoveItem={removeItem}
           onItemChange={handleItemChange}
+          updateCalculations={updateCalculations}
         />
       </div>
       
       {showPreview && (
-        <InvoicePreview 
-          ref={invoicePreviewRef}
-          invoiceData={invoiceData}
-          formatDate={formatDate}
-        />
+        <div className="invoice-preview-container">
+          <InvoicePreview 
+            ref={invoicePreviewRef}
+            invoiceData={invoiceData}
+            formatDate={formatDate}
+          />
+        </div>
       )}
     </>
   );
