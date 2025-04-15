@@ -1,20 +1,26 @@
 # Invoice Generator
 
-![Invoice Generator Banner](https://i.imgur.com/EKJvz0f.jpg)
-
-A modern, feature-rich web application for generating professional invoices with support for both USD and INR currencies.
+A professional invoice generator application with support for USD and INR currencies.
 
 ## Features
 
-- **User Authentication** - Secure login system to protect your invoice data
-- **Professional Templates** - Clean and modern invoice design
-- **Dual Currency Support** - Automatically calculate amounts in both USD and INR
-- **Tax Calculations** - Automatic tax calculations based on configurable tax rates
-- **PDF Export** - Download your invoices as professional PDF documents
-- **Email Integration** - Send invoices directly to clients via email
-- **Company Branding** - Add your company logo and details to the invoice
-- **GST/PAN Support** - Fields for GST and PAN numbers for Indian businesses
-- **Responsive Design** - Works on desktop and mobile devices
+- Modern UI with glass morphism design
+- Authentication system
+- Dual currency support (USD and INR)
+- PDF generation and download
+- Email sending capability
+- Tax calculation
+- Professional invoice preview
+
+## How to Use
+
+1. Login using the credentials:
+   - Email: user@example.com
+   - Password: password123
+   
+2. Fill in your company and client details
+3. Add invoice items
+4. Preview, download as PDF, or send via email
 
 ## Demo
 

@@ -12,7 +12,9 @@ function formatDateForInput(date) {
 }
 
 function setupDefaultLogo() {
-  const defaultLogoPath = './images/default-logo.png';
+  // Changed to work with both local and GitHub Pages deployment
+  const defaultLogoPath = window.location.href.includes('github.io') ? 
+    './images/default-logo.png' : './images/default-logo.png';
   const logoElement = document.getElementById('previewLogo');
   logoElement.src = defaultLogoPath;
   logoElement.alt = 'Company Logo';
