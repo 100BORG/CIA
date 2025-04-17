@@ -1,10 +1,18 @@
 // Main application initialization
 document.addEventListener('DOMContentLoaded', function() {
+  console.log("Main.js: DOM content loaded, checking login state");
+  
+  // First immediate check - do not continue initializing if not logged in
+  if (!localStorage.getItem('isLoggedIn')) {
+    console.log("Main.js: Not logged in, redirecting to login page");
+    window.location.href = 'login.html';
+    return; // Stop executing the rest of the function
+  }
+  
+  console.log("Main.js: User is logged in, initializing app");
+  
   // Initialize EmailJS
-  emailjs.init('E6klVgu7C2hAkoxFM'); // Replace with your EmailJS user ID
-
-  // Check login state
-  checkLoginState();
+  emailjs.init('E6klVgu7C2hAkoxFM');
   
   // Setup default logo
   setupDefaultLogo();
@@ -27,12 +35,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function setupEventListeners() {
-  // Login functionality
-  document.getElementById('loginBtn').addEventListener('click', handleLogin);
-
-  // Sign out functionality
-  document.getElementById('signOutBtn').addEventListener('click', handleSignOut);
-
+  // Sign out functionality is now handled in auth.js
+  
   // Add item button
   document.getElementById('addItemBtn').addEventListener('click', addNewItem);
 
