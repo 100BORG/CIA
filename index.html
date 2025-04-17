@@ -788,6 +788,21 @@ IFSC Code: 11111
       document.getElementById('invoiceNumber').value = invoiceNumber;
       document.getElementById('previewInvoiceNumber').textContent = invoiceNumber;
 
+     // Add the Add Description button to the first row
+  const firstRow = document.querySelector('.item-row');
+  if (firstRow) {
+    const addNestedRowButton = document.createElement('button');
+    addNestedRowButton.classList.add('btn', 'btn-secondary', 'add-nested-row');
+    addNestedRowButton.textContent = 'Add Description';
+    firstRow.querySelector('td').appendChild(addNestedRowButton);
+
+    // Attach event listener to the Add Description button
+    addNestedRowButton.addEventListener('click', function (e) {
+      e.preventDefault();
+      addNestedRow(firstRow);
+    });
+  }
+
       // Set default dates
       const today = new Date();
       document.getElementById('invoiceDate').value = formatDateForInput(today);
