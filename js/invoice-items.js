@@ -1,6 +1,7 @@
 // Invoice item management
 function addNewItem() {
   const tbody = document.getElementById('itemsTableBody');
+  if (!tbody) return;
   const newRow = document.createElement('tr');
   newRow.classList.add('item-row');
 
@@ -28,29 +29,30 @@ function addNewItem() {
   const usdInput = newRow.querySelector('.item-total-usd');
   const inrInput = newRow.querySelector('.item-total-inr');
 
-  usdInput.addEventListener('input', updateCalculations);
-  inrInput.addEventListener('input', updateCalculations);
-
-  const addNestedRowButton = newRow.querySelector('.add-nested-row');
-  addNestedRowButton.addEventListener('click', function (e) {
-    e.preventDefault();
-    addNestedRow(newRow);
-  });
+  if (usdInput) usdInput.addEventListener('input', updateCalculations);
+  if (inrInput) inrInput.addEventListener('input', updateCalculations);
 
   updateCalculations();
 }
 
 function removeItem(button) {
   const tbody = document.getElementById('itemsTableBody');
+  if (!tbody) return;
+  
   const row = button.closest('tr');
+  if (!row) return;
 
-  if (tbody.rows.length > 1) {
+  // Only remove if more than one item-row remains
+  const itemRows = tbody.querySelectorAll('.item-row');
+  if (itemRows.length > 1 || row.classList.contains('nested-row')) {
     row.remove();
     updateCalculations();
   }
 }
 
 function addNestedRow(itemRow) {
+  if (!itemRow) return;
+  
   const newRow = document.createElement('tr');
   newRow.classList.add('nested-row');
 
@@ -75,13 +77,15 @@ function addNestedRow(itemRow) {
     lastNestedRow = lastNestedRow.nextElementSibling;
   }
 
-  lastNestedRow.parentNode.insertBefore(newRow, lastNestedRow.nextSibling);
+  if (lastNestedRow.parentNode) {
+    lastNestedRow.parentNode.insertBefore(newRow, lastNestedRow.nextSibling);
+  
+    const usdInput = newRow.querySelector('.item-total-usd');
+    const inrInput = newRow.querySelector('.item-total-inr');
 
-  const usdInput = newRow.querySelector('.item-total-usd');
-  const inrInput = newRow.querySelector('.item-total-inr');
+    if (usdInput) usdInput.addEventListener('input', updateCalculations);
+    if (inrInput) inrInput.addEventListener('input', updateCalculations);
 
-  usdInput.addEventListener('input', updateCalculations);
-  inrInput.addEventListener('input', updateCalculations);
-
-  updateCalculations();
+    updateCalculations();
+  }
 }

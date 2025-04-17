@@ -83,28 +83,100 @@ function showPreview() {
 
 function downloadPDF() {
   updatePreview();
-  const { jsPDF } = window.jspdf;
   const preview = document.getElementById('invoicePreview');
+  if (!preview) {
+    console.error('Preview element not found');
+    alert('Error: Could not find the preview element.');
+    return;
+  }
+  
   preview.style.display = 'block';
+  
+  // Show loading indicator
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  if (loadingOverlay) loadingOverlay.classList.add('active');
 
+  console.log('Starting PDF generation');
+  
+  // Double check libraries before proceeding
+  if (typeof html2canvas === 'undefined') {
+    console.error('html2canvas library not loaded');
+    alert('Required library (html2canvas) is not loaded. Please refresh the page and try again.');
+    if (loadingOverlay) loadingOverlay.classList.remove('active');
+    preview.style.display = 'none';
+    return;
+  }
+
+  // Fix for jsPDF initialization - simplified approach using common CDN version
   html2canvas(preview, {
     scale: 2,
     useCORS: true,
     scrollY: 0,
+    logging: false,
+    allowTaint: true,
+    backgroundColor: '#ffffff'
   }).then((canvas) => {
+    console.log('Canvas generated successfully');
     const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = pdf.internal.pageSize.getHeight();
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-    const imgX = (pdfWidth - imgWidth * ratio) / 2;
-    const imgY = 10;
+    
+    try {
+      console.log('Initializing jsPDF');
+      
+      // Try multiple ways to initialize jsPDF
+      let pdf;
+      
+      // Try direct import first (ESM style)
+      if (typeof jsPDF === 'function') {
+        console.log('Using direct jsPDF constructor');
+        pdf = new jsPDF('p', 'mm', 'a4');
+      } 
+      // Try UMD style import (window.jspdf.jsPDF)
+      else if (typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function') {
+        console.log('Using window.jspdf.jsPDF constructor');
+        const { jsPDF } = window.jspdf;
+        pdf = new jsPDF('p', 'mm', 'a4');
+      }
+      // Try alternative global
+      else if (typeof window.jsPDF === 'function') {
+        console.log('Using window.jsPDF constructor');
+        pdf = new window.jsPDF('p', 'mm', 'a4');
+      }
+      else {
+        throw new Error('jsPDF library not found. Make sure the library is properly loaded.');
+      }
+      
+      console.log('jsPDF initialized successfully');
+      
+      // Continue with PDF generation
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
 
-    pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-    pdf.save(`Invoice-${document.getElementById('invoiceNumber').value}.pdf`);
-
+      console.log('Adding image to PDF');
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      
+      console.log('Saving PDF');
+      const fileName = `Invoice-${document.getElementById('invoiceNumber').value || 'new'}.pdf`;
+      pdf.save(fileName);
+      console.log(`PDF saved as ${fileName}`);
+      
+      if (loadingOverlay) loadingOverlay.classList.remove('active');
+      preview.style.display = 'none';
+      
+    } catch (err) {
+      console.error('Error creating PDF:', err);
+      alert('Error creating PDF: ' + err.message + '. Please check console for details.');
+      if (loadingOverlay) loadingOverlay.classList.remove('active');
+      preview.style.display = 'none';
+    }
+  }).catch(err => {
+    console.error('Error generating canvas:', err);
+    alert('Failed to generate PDF: ' + err.message);
+    if (loadingOverlay) loadingOverlay.classList.remove('active');
     preview.style.display = 'none';
   });
 }

@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Generation Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        button {
+            background: #e07fa9;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        #pdf-content {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        #status {
+            background-color: #f8f8f8;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>PDF Generation Demo</h1>
+    
+    <div class="card">
+        <h2>Library Status</h2>
+        <div id="library-status">Checking...</div>
+        <button onclick="loadLibraries()">Load Libraries</button>
+    </div>
+    
+    <div class="card">
+        <h2>PDF Content</h2>
+        <div id="pdf-content">
+            <h1>Sample Invoice</h1>
+            <p>This is a test invoice to check PDF generation.</p>
+            <table border="1" cellpadding="5" style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <th>Item</th>
+                    <th>Price</th>
+                </tr>
+                <tr>
+                    <td>Test Item 1</td>
+                    <td>$100.00</td>
+                </tr>
+                <tr>
+                    <td>Test Item 2</td>
+                    <td>$150.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Total</strong></td>
+                    <td><strong>$250.00</strong></td>
+                </tr>
+            </table>
+        </div>
+        <button id="generate-pdf">Generate PDF</button>
+    </div>
+    
+    <div id="status">Ready to test</div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLibraries();
+        });
+        
+        function updateStatus(message) {
+            const status = document.getElementById('status');
+            status.innerHTML += '<br>' + message;
+            console.log(message);
+        }
+        
+        function checkLibraries() {
+            const libraryStatus = document.getElementById('library-status');
+            let html = '';
+            
+            // Check for jsPDF
+            if (typeof window.jspdf !== 'undefined' || typeof jsPDF !== 'undefined') {
+                html += '<p style="color: green">✓ jsPDF is available</p>';
+            } else {
+                html += '<p style="color: red">✗ jsPDF is not loaded</p>';
+            }
+            
+            // Check for html2canvas
+            if (typeof html2canvas !== 'undefined') {
+                html += '<p style="color: green">✓ html2canvas is available</p>';
+            } else {
+                html += '<p style="color: red">✗ html2canvas is not loaded</p>';
+            }
+            
+            libraryStatus.innerHTML = html;
+        }
+        
+        function loadLibraries() {
+            updateStatus('Loading libraries...');
+            
+            // Load jsPDF
+            const jsPdfScript = document.createElement('script');
+            jsPdfScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            jsPdfScript.onload = () => {
+                updateStatus('jsPDF loaded successfully');
+                
+                // Load html2canvas after jsPDF
+                const html2canvasScript = document.createElement('script');
+                html2canvasScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+                html2canvasScript.onload = () => {
+                    updateStatus('html2canvas loaded successfully');
+                    checkLibraries();
+                    setupPdfButton();
+                };
+                html2canvasScript.onerror = () => {
+                    updateStatus('Failed to load html2canvas');
+                };
+                document.head.appendChild(html2canvasScript);
+            };
+            jsPdfScript.onerror = () => {
+                updateStatus('Failed to load jsPDF');
+            };
+            document.head.appendChild(jsPdfScript);
+        }
+        
+        function setupPdfButton() {
+            const generateButton = document.getElementById('generate-pdf');
+            generateButton.addEventListener('click', generatePDF);
+        }
+        
+        function generatePDF() {
+            const content = document.getElementById('pdf-content');
+            updateStatus('Starting PDF generation');
+            
+            html2canvas(content, { 
+                scale: 2,
+                useCORS: true,
+                logging: true
+            }).then(canvas => {
+                updateStatus('Canvas generated');
+                
+                try {
+                    // Get jsPDF constructor
+                    let jsPDFConstructor;
+                    
+                    if (typeof window.jspdf !== 'undefined') {
+                        updateStatus('Using window.jspdf.jsPDF constructor');
+                        jsPDFConstructor = window.jspdf.jsPDF;
+                    } else if (typeof jsPDF !== 'undefined') {
+                        updateStatus('Using global jsPDF constructor');
+                        jsPDFConstructor = jsPDF;
+                    } else {
+                        throw new Error('jsPDF constructor not found');
+                    }
+                    
+                    // Create PDF
+                    const pdf = new jsPDFConstructor({
+                        orientation: 'portrait',
+                        unit: 'mm',
+                        format: 'a4'
+                    });
+                    
+                    updateStatus('PDF object created');
+                    
+                    // Convert canvas to image
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    // Get dimensions
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    const imgWidth = canvas.width;
+                    const imgHeight = canvas.height;
+                    const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+                    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+                    const imgY = 10;
+                    
+                    // Add image to PDF
+                    pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+                    updateStatus('Image added to PDF');
+                    
+                    // Save PDF
+                    pdf.save('demo-invoice.pdf');
+                    updateStatus('PDF saved successfully');
+                    
+                } catch (error) {
+                    updateStatus('Error generating PDF: ' + error.message);
+                    console.error('PDF generation error:', error);
+                }
+            }).catch(error => {
+                updateStatus('Canvas generation error: ' + error.message);
+                console.error('Canvas error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

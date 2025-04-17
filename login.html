@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Login - Invoice Generator</title>
+    <!-- Add favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+    
+    <!-- Load scripts after -->
     <script src="redirect.js"></script>
-    <script src="js/auth.js"></script>
     <style>
         * {
             margin: 0;
@@ -200,9 +203,74 @@
                 order: -1;
             }
         }
+
+        /* Loading spinner */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        /* Add loading overlay styles */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.2rem;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .spinner {
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-top: 5px solid #e07fa9;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 2s linear infinite;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
+    <!-- Add noscript warning -->
+    <noscript>
+        <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: white; z-index: 10000; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 20px; text-align: center;">
+            <h2 style="color: red;">JavaScript is disabled</h2>
+            <p>This application requires JavaScript to function. Please enable JavaScript in your browser settings and reload the page.</p>
+        </div>
+    </noscript>
+
+    <!-- Loading overlay -->
+    <div id="loadingOverlay" class="loading-overlay active">
+        <div class="spinner"></div>
+        <div>Loading login page...</div>
+    </div>
+
     <div class="login-container">
         <div class="login-form">
             <div class="logo">Sama Tributa Solutions</div>
@@ -237,6 +305,10 @@
                 </svg>
             </button>
             
+            <div style="text-align: center; margin-top: 10px; font-size: 14px;">
+                <strong>Demo credentials:</strong> user@example.com / password123
+            </div>
+            
             <div class="social-login">
                 <div class="or-text">or continue with</div>
                 <div class="social-buttons">
@@ -268,6 +340,7 @@
         </div>
     </div>
 
+    <script src="js/auth.js"></script>
     <script>
         // Toggle password visibility
         document.getElementById('togglePassword').addEventListener('click', function() {
@@ -279,6 +352,33 @@
                 passwordInput.type = 'password';
                 this.textContent = '👁️';
             }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loading overlay when everything is loaded
+            setTimeout(function() {
+                document.getElementById('loadingOverlay').classList.remove('active');
+            }, 500);
+            
+            // Prefill demo credentials with a button
+            const demoLink = document.createElement('a');
+            demoLink.href = '#';
+            demoLink.textContent = 'Fill demo credentials';
+            demoLink.style.color = '#e07fa9';
+            demoLink.style.display = 'block';
+            demoLink.style.textAlign = 'center';
+            demoLink.style.marginTop = '10px';
+            
+            demoLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.getElementById('email').value = 'user@example.com';
+                document.getElementById('password').value = 'password123';
+            });
+            
+            document.querySelector('.login-form').insertBefore(
+                demoLink, 
+                document.querySelector('.social-login')
+            );
         });
     </script>
 </body>
