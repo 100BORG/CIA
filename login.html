@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Invoice Generator</title>
     <!-- Add favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📝</text></svg>">
+    <link rel="icon" href="./images/favicon.png" type="image/png">
     
     <!-- Load scripts after -->
     <script src="redirect.js"></script>
@@ -18,7 +18,7 @@
         }
         
         body {
-            background: url(https://www.deskera.com/blog/content/images/2020/06/eInvoice--1-.png) no-repeat center center fixed;
+            background: url(https://v3.fal.media/files/panda/sO6WFMolI-FrU0SJEi9bR.png) no-repeat center center fixed;
             background-size: cover;
             height: 100vh;
             display: flex;
@@ -27,7 +27,7 @@
         }
         
         .login-container {
-            background-color: rgb(248, 245, 245);
+            background-color: rgba(248, 245, 245, 0.911);
             width: 90%;
             max-width: 1000px;
             border-radius: 20px;
@@ -54,11 +54,38 @@
             object-fit: cover;
         }
         
-        .logo {
-            color: #e07fa9;
-            font-size: 24px;
-            margin-bottom: 1rem;
-        }
+/* Logo styling */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 2rem;
+}
+
+.logo-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* This ensures the image stays within the circular boundary */
+    flex-shrink: 0; /* Prevents the icon from shrinking */
+}
+
+.logo-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* This ensures the image maintains its aspect ratio */
+}
+
+.logo-text {
+    color: #131212;
+    font-size: 24px;
+    font-weight: 500;
+}
+
         
         .welcome-text {
             color: #666;
@@ -78,6 +105,7 @@
             display: block;
             margin-bottom: 0.5rem;
             color: #333;
+            font-weight: bolder;
         }
         
         .password-container {
@@ -91,14 +119,14 @@
             padding: 12px;
             border-radius: 8px;
             border: none;
-            background-color: #e8f4f8;
+            background-color: #e9e9e0;
             font-size: 16px;
         }
         
         input[type="email"]:focus,
         input[type="password"]:focus {
             outline: none;
-            box-shadow: 0 0 0 2px #e07fa9;
+            box-shadow: 0 0 0 2px #f0e768;
         }
         
         .forgot-password {
@@ -107,7 +135,7 @@
         }
         
         .forgot-password a {
-            color: #666;
+            color: #4b4b48;
             text-decoration: none;
         }
         
@@ -122,8 +150,8 @@
         }
         
         .btn-login {
-            background-color: #e07fa9;
-            color: white;
+            background-color: #ebe26b;
+            color: rgb(26, 25, 25);
             border: none;
             padding: 12px 24px;
             border-radius: 50px;
@@ -138,7 +166,7 @@
         }
         
         .btn-login:hover {
-            background-color: #d06a96;
+            background-color: #d6d45d;
         }
         
         .social-login {
@@ -171,7 +199,7 @@
         }
         
         .social-btn:hover {
-            border-color: #e07fa9;
+            border-color: #c5b037;
         }
         
         .signup-text {
@@ -182,7 +210,7 @@
         }
         
         .signup-text a {
-            color: #e07fa9;
+            color: #b9a63a;
             text-decoration: none;
             font-weight: bold;
         }
@@ -244,16 +272,29 @@
             opacity: 1;
             visibility: visible;
         }
+
         
         .spinner {
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-top: 5px solid #e07fa9;
+            border: 5px solid rgba(116, 108, 108, 0.3);
+            border-top: 5px solid #deee50;
             border-radius: 50%;
             width: 50px;
             height: 50px;
             animation: spin 2s linear infinite;
             margin-right: 10px;
         }
+
+        .show-password svg {
+    stroke: #333;
+    vertical-align: middle;
+    transition: stroke 0.2s;
+}
+
+.show-password:hover svg {
+    stroke: #ccbb5c;
+}
+
+
     </style>
 </head>
 <body>
@@ -273,7 +314,13 @@
 
     <div class="login-container">
         <div class="login-form">
-            <div class="logo">Sama Tributa Solutions</div>
+            <div class="logo">
+                <div class="logo-icon">
+                    <!-- Replace the SVG with an img tag -->
+                    <img src=".\images\c-logo.png" alt="Sama Tributa Logo">
+                </div>
+                <span class="logo-text">Sama Tributa Solutions</span>
+            </div>
             
             <h1>Invoice Generator</h1>
             
@@ -285,8 +332,8 @@
             <div class="form-group">
                 <label for="password">Password</label>
                 <div class="password-container">
-                    <input type="password" id="password" placeholder="Enter your password">
-                    <span class="show-password" id="togglePassword">👁️</span>
+                    <input type="password" id="password" placeholder="Enter your password" />
+                    <span class="show-password" id="togglePassword"></span>
                 </div>
                 <div class="forgot-password">
                     <a href="#">Forgot Password ?</a>
@@ -305,9 +352,6 @@
                 </svg>
             </button>
             
-            <div style="text-align: center; margin-top: 10px; font-size: 14px;">
-                <strong>Demo credentials:</strong> user@example.com / password123
-            </div>
             
             <div class="social-login">
                 <div class="or-text">or continue with</div>
@@ -336,23 +380,23 @@
         </div>
         
         <div class="login-image">
-            <img src="https://img.freepik.com/free-vector/man-sitting-armchair-using-laptop-home_778687-2989.jpg?semt=ais_hybrid" alt="3D illustration of woman sitting in chair with laptop next to cactus">
+            <img src="https://v3.fal.media/files/koala/mCAx4qKIsxgRSmqzm7th4.png" alt="3D illustration of woman sitting in chair with laptop next to cactus">
         </div>
     </div>
 
     <script src="js/auth.js"></script>
     <script>
-        // Toggle password visibility
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const passwordInput = document.getElementById('password');
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                this.textContent = '🔒';
-            } else {
-                passwordInput.type = 'password';
-                this.textContent = '👁️';
-            }
-        });
+// Modified password toggle script
+document.getElementById('togglePassword').addEventListener('click', function() {
+    const passwordInput = document.getElementById('password');
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    } else {
+        passwordInput.type = 'password';
+        this.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+    }
+});
 
         document.addEventListener('DOMContentLoaded', function() {
             // Hide loading overlay when everything is loaded
@@ -364,7 +408,7 @@
             const demoLink = document.createElement('a');
             demoLink.href = '#';
             demoLink.textContent = 'Fill demo credentials';
-            demoLink.style.color = '#e07fa9';
+            demoLink.style.color = '#c5b037';
             demoLink.style.display = 'block';
             demoLink.style.textAlign = 'center';
             demoLink.style.marginTop = '10px';
