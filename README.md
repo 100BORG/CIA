@@ -5,22 +5,34 @@ A professional invoice generator application with support for USD and INR curren
 ## Features
 
 - Modern UI with glass morphism design
-- Authentication system
-- Dual currency support (USD and INR)
-- PDF generation and download
-- Email sending capability
-- Tax calculation
-- Professional invoice preview
+- Authentication system with session timeout handling
+- Dual currency support (USD and INR) with automatic conversion
+- PDF generation and download using jsPDF and html2canvas
+- Email sending capability via EmailJS
+- Tax calculation and detailed invoice preview
+- Responsive design with dark mode toggle
+- Diagnostic and debug tools for troubleshooting
+- LocalStorage-based session and data management
 
 ## How to Use
 
-1. Login using the credentials:
-   - Email: user@example.com
-   - Password: password123
+1. **Login** using the credentials:
+   - Email: `user@example.com`
+   - Password: `password123`
    
-2. Fill in your company and client details
-3. Add invoice items
-4. Preview, download as PDF, or send via email
+2. **Fill in the Invoice Details:**
+   - Add company and client information
+   - Add invoice items with amounts in USD or INR
+   - Specify tax rate and payment terms
+
+3. **Preview and Export:**
+   - Preview the invoice
+   - Download as a PDF
+   - Send via email
+
+4. **Manage Sessions:**
+   - Auto-login and session timeout features are included
+   - Use diagnostic tools to test LocalStorage and libraries
 
 ## Demo
 
@@ -28,29 +40,43 @@ A professional invoice generator application with support for USD and INR curren
 
 ## Technologies Used
 
-- HTML5
-- CSS3 with modern glass morphism design
-- Vanilla JavaScript
-- jsPDF library for PDF generation
-- html2canvas for HTML to PDF conversion
-- EmailJS for sending emails
+- **Frontend:** HTML5, CSS3, Vanilla JavaScript
+- **Libraries:**
+  - [jsPDF](https://github.com/MrRio/jsPDF) for PDF generation
+  - [html2canvas](https://html2canvas.hertzen.com/) for HTML to image conversion
+  - [EmailJS](https://www.emailjs.com/) for email integration
+- **Backend:** Node.js (for serving static files)
+- **Tools:** Diagnostic and debug pages for troubleshooting
 
 ## Installation
 
 1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/invoice-generator.git
-```
+   ```bash
+   git clone https://github.com/yourusername/invoice-generator.git
+   ```
 
-2. Open the `index.html` file in your web browser.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Start the server:
+   ```bash
+   npm start
+   ```
+
+4. Open the application in your browser:
+   ```
+   http://localhost:3000
+   ```
 
 ## Usage
 
 ### Login
 
 Use the following credentials to access the application:
-- **Email:** user@example.com
-- **Password:** password123
+- **Email:** `user@example.com`
+- **Password:** `password123`
 
 ### Creating an Invoice
 
@@ -73,7 +99,7 @@ Use the following credentials to access the application:
    - GSTIN and PAN details
 
 4. **Add Invoice Items:**
-   - Enter item names, descriptions
+   - Enter item names and descriptions
    - Enter amounts in USD (INR will calculate automatically) or vice versa
    - Add multiple items as needed
 
@@ -104,6 +130,15 @@ Generate professional-looking PDFs of your invoices with a single click. The PDF
 
 Send invoices directly to clients via email using the integrated EmailJS service.
 
+### Responsive Design and Dark Mode
+
+The application is mobile-friendly and includes a dark mode toggle for better user experience.
+
+### Diagnostic and Debug Tools
+
+- **Diagnostic Page:** Test library loading, LocalStorage, and login state.
+- **Debug Page:** Verify server setup and file accessibility.
+
 ## Customization
 
 You can customize various aspects of the invoice:
@@ -111,6 +146,32 @@ You can customize various aspects of the invoice:
 - **Company Details:** Update your company information in the sender section
 - **Bank Details:** Modify the payment information in the notes section
 - **Invoice Design:** Edit the CSS in the `<style>` section of the HTML file
+
+## Development
+
+### File Structure
+
+- **HTML Files:** `index.html`, `login.html`, `demo.html`, `diagnostic.html`, `debug.html`
+- **JavaScript Files:**
+  - `js/utils.js`: Utility functions
+  - `js/main.js`: Main application logic
+  - `js/invoice-items.js`: Invoice item management
+  - `js/invoice-actions.js`: Invoice reset and email sending
+  - `js/preview.js`: Invoice preview and PDF generation
+  - `js/calculations.js`: Currency conversion and tax calculations
+  - `js/auth.js`: Authentication and session management
+- **Server:** `server.js` (Node.js-based static file server)
+
+### Scripts
+
+- Start the server:
+  ```bash
+  npm start
+  ```
+- Development mode with live reload:
+  ```bash
+  npm run dev
+  ```
 
 ## License
 
