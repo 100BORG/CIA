@@ -11,7 +11,11 @@
     "preview": "vite preview",
     "serve": "node --watch server.js"
   },
-  "keywords": ["invoice", "pdf", "generator"],
+  "keywords": [
+    "invoice",
+    "pdf",
+    "generator"
+  ],
   "author": "",
   "license": "MIT",
   "engines": {
@@ -24,6 +28,7 @@
     "jspdf": "^2.5.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^5.5.0",
     "react-router-dom": "^6.10.0"
   },
   "devDependencies": {

@@ -1,17 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import InvoiceItemsTable from './InvoiceItemsTable';
-import emailjs from '@emailjs/browser';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import emailService from '../services/emailService';
+import pdfService from '../services/pdfService';
+import exchangeRateService from '../services/exchangeRateService';
 import { useError } from '../context/ErrorContext';
 import Modal from './Modal';
-
-// Initialize EmailJS when component loads
-try {
-  emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
-} catch (error) {
-  console.error('Error initializing EmailJS:', error);
-}
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const InvoiceForm = ({ 
   invoiceData, 
@@ -33,28 +28,18 @@ const InvoiceForm = ({
     fetchExchangeRate();
   }, []);
   
-  // Fetch current exchange rate from API
+  // Fetch current exchange rate using the exchangeRateService
   const fetchExchangeRate = async () => {
     try {
-      // This is just an example API endpoint - you would need to use a real one
-      // Note: many currency APIs require API keys
-      const response = await fetch(
-        'https://open.er-api.com/v6/latest/USD'
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch exchange rate');
-      }
-      
-      const data = await response.json();
-      if (data.rates && data.rates.INR) {
-        setExchangeRate(data.rates.INR);
-        // Recalculate with new exchange rate
-        updateCalculationsWithRate(invoiceData.items, data.rates.INR);
-      }
+      const rate = await exchangeRateService.fetchExchangeRate();
+      setExchangeRate(rate);
+      // Recalculate with new exchange rate
+      updateCalculationsWithRate(invoiceData.items, rate);
     } catch (error) {
       console.error('Error fetching exchange rate:', error);
       // Continue with default exchange rate if API fails
+      const defaultRate = exchangeRateService.getCurrentRate();
+      setExchangeRate(defaultRate);
     }
   };
   
@@ -258,12 +243,8 @@ const InvoiceForm = ({
         attachment: imgData
       };
       
-      // Send email
-      await emailjs.send(
-        import.meta.env.VITE_EMAILJS_SERVICE_ID, 
-        import.meta.env.VITE_EMAILJS_TEMPLATE_ID, 
-        emailParams
-      );
+      // Use emailService instead of direct emailjs calls
+      await emailService.sendInvoice(emailParams);
       
       setIsLoading(false);
       setError('Invoice sent successfully!'); // Using error display for success message too
@@ -287,54 +268,20 @@ const InvoiceForm = ({
       // First ensure we're in preview mode
       onPreview();
       
-      // Use a Promise instead of setTimeout for better async handling
-      const generatePDF = async () => {
-        return new Promise((resolve, reject) => {
-          // Check for preview element after a small delay to ensure it's rendered
-          const checkForPreview = () => {
-            const previewElement = document.getElementById('invoicePreview');
-            
-            if (previewElement) {
-              resolve(previewElement);
-            } else {
-              // If not found yet, try again after a short delay
-              setTimeout(checkForPreview, 100);
-            }
-          };
-          
-          // Start checking
-          checkForPreview();
-          
-          // Add a timeout to avoid infinite checking
-          setTimeout(() => reject(new Error('Preview generation timed out')), 5000);
-        });
-      };
-      
-      const previewElement = await generatePDF();
-      
-      const canvas = await html2canvas(previewElement, {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0,
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const ratio = canvas.width / canvas.height;
-      const imgWidth = pdfWidth;
-      const imgHeight = imgWidth / ratio;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
-      
-      setIsLoading(false);
+      // Wait for the preview element to be ready
+      try {
+        const previewElement = await pdfService.waitForElement('invoicePreview');
+        
+        // Use our centralized PDF service to generate the PDF
+        await pdfService.generatePDF(
+          previewElement, 
+          `Invoice_${invoiceData.invoiceNumber}.pdf`
+        );
+        
+        setIsLoading(false);
+      } catch (error) {
+        throw new Error(`Failed to generate preview: ${error.message}`);
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       setIsLoading(false);

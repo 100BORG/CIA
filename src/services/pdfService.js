@@ -51,7 +51,12 @@ const pdfService = {
    */
   waitForElement: (elementId, timeout = 5000) => {
     return new Promise((resolve, reject) => {
+      // Track if we've already timed out to prevent continued checking
+      let isTimedOut = false;
+      
       const checkElement = () => {
+        if (isTimedOut) return;
+        
         const element = document.getElementById(elementId);
         if (element) {
           resolve(element);
@@ -64,7 +69,10 @@ const pdfService = {
       checkElement();
       
       // Add timeout to avoid infinite checking
-      setTimeout(() => reject(new Error(`Element ${elementId} not found within ${timeout}ms`)), timeout);
+      setTimeout(() => {
+        isTimedOut = true;
+        reject(new Error(`Element ${elementId} not found within ${timeout}ms`));
+      }, timeout);
     });
   }
 };

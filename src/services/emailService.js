@@ -28,6 +28,9 @@ const emailService = {
    * @returns {Promise} - EmailJS response
    */
   sendInvoice: async (params) => {
+    // Make sure EmailJS is initialized before sending
+    emailService.init();
+    
     return emailjs.send(
       API_CONFIG.emailJs.serviceId,
       API_CONFIG.emailJs.templateId,
@@ -35,5 +38,8 @@ const emailService = {
     );
   }
 };
+
+// Initialize EmailJS when this module loads
+emailService.init();
 
 export default emailService;
