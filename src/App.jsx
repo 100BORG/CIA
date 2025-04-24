@@ -8,6 +8,8 @@ import DiagnosticPage from './pages/DiagnosticPage'
 import DebugPage from './pages/DebugPage'
 import DemoPage from './pages/DemoPage'
 import ErrorDisplay from './components/ErrorDisplay'
+import Modal from './components/Modal'
+import { useError } from './context/ErrorContext'
 
 // Session timeout in milliseconds (30 minutes)
 const SESSION_TIMEOUT = 30 * 60 * 1000;
@@ -15,8 +17,9 @@ const SESSION_TIMEOUT = 30 * 60 * 1000;
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
-  const [error, setError] = useState(null)
   const [sessionTimer, setSessionTimer] = useState(null)
+  const [showLogoutModal, setShowLogoutModal] = useState(false)
+  const { error, setError, clearError } = useError()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -110,15 +113,16 @@ function App() {
   }
 
   const handleLogout = () => {
-    const hasUnsavedChanges = confirm('Are you sure you want to sign out? Any unsaved changes will be lost.')
-    
-    if (hasUnsavedChanges) {
-      localStorage.removeItem('isLoggedIn')
-      localStorage.removeItem('userEmail')
-      setIsAuthenticated(false)
-      navigate('/login')
-    }
-  }
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userEmail');
+    setIsAuthenticated(false);
+    setShowLogoutModal(false);
+    navigate('/login');
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(prevMode => !prevMode)
@@ -129,10 +133,28 @@ function App() {
       {error && (
         <ErrorDisplay 
           error={error} 
-          onClose={() => setError(null)} 
+          onClose={() => clearError()} 
           duration={5000} 
         />
       )}
+      
+      <Modal 
+        isOpen={showLogoutModal} 
+        onClose={() => setShowLogoutModal(false)} 
+        title="Confirm Logout"
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowLogoutModal(false)}>
+              Cancel
+            </button>
+            <button className="btn" onClick={confirmLogout}>
+              Logout
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to sign out? Any unsaved changes will be lost.</p>
+      </Modal>
       
       <Routes>
         <Route path="/login" element={

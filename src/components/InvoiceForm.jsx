@@ -3,10 +3,12 @@ import InvoiceItemsTable from './InvoiceItemsTable';
 import emailjs from '@emailjs/browser';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { useError } from '../context/ErrorContext';
+import Modal from './Modal';
 
 // Initialize EmailJS when component loads
 try {
-  emailjs.init('E6klVgu7C2hAkoxFM'); // Using the same ID as the original app
+  emailjs.init(import.meta.env.VITE_EMAILJS_PUBLIC_KEY);
 } catch (error) {
   console.error('Error initializing EmailJS:', error);
 }
@@ -20,8 +22,78 @@ const InvoiceForm = ({
   isLoading,
   setIsLoading
 }) => {
-  // Exchange rate for USD to INR conversion
-  const exchangeRate = 82;
+  // Initialize state and hooks
+  const [exchangeRate, setExchangeRate] = useState(82);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const { setError } = useError();
+  
+  // Fetch exchange rate on component mount
+  useEffect(() => {
+    fetchExchangeRate();
+  }, []);
+  
+  // Fetch current exchange rate from API
+  const fetchExchangeRate = async () => {
+    try {
+      // This is just an example API endpoint - you would need to use a real one
+      // Note: many currency APIs require API keys
+      const response = await fetch(
+        'https://open.er-api.com/v6/latest/USD'
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch exchange rate');
+      }
+      
+      const data = await response.json();
+      if (data.rates && data.rates.INR) {
+        setExchangeRate(data.rates.INR);
+        // Recalculate with new exchange rate
+        updateCalculationsWithRate(invoiceData.items, data.rates.INR);
+      }
+    } catch (error) {
+      console.error('Error fetching exchange rate:', error);
+      // Continue with default exchange rate if API fails
+    }
+  };
+  
+  const updateCalculationsWithRate = (items, rate) => {
+    // Calculate subtotals with the provided exchange rate
+    let subtotalUSD = 0;
+    let subtotalINR = 0;
+    
+    items.forEach(item => {
+      subtotalUSD += parseFloat(item.amountUSD) || 0;
+      // Recalculate INR amounts based on new exchange rate
+      if (item.amountUSD) {
+        const newAmountINR = parseFloat(item.amountUSD) * rate;
+        item.amountINR = newAmountINR.toFixed(2);
+      }
+      subtotalINR += parseFloat(item.amountINR) || 0;
+    });
+    
+    // Calculate tax amounts
+    const taxRate = parseFloat(invoiceData.taxRate) || 0;
+    const taxAmountUSD = (subtotalUSD * taxRate) / 100;
+    const taxAmountINR = (subtotalINR * taxRate) / 100;
+    
+    // Calculate totals
+    const totalUSD = subtotalUSD + taxAmountUSD;
+    const totalINR = subtotalINR + taxAmountINR;
+    
+    // Update invoice data
+    setInvoiceData(prevData => ({
+      ...prevData,
+      items: [...items],
+      subtotalUSD,
+      subtotalINR,
+      taxAmountUSD,
+      taxAmountINR,
+      totalUSD,
+      totalINR
+    }));
+  };
   
   // Calculate totals whenever items or tax rate changes
   useEffect(() => {
@@ -62,6 +134,20 @@ const InvoiceForm = ({
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif'];
+      if (!validTypes.includes(file.type)) {
+        setError && setError('Please upload a valid image file (JPEG, PNG, SVG, or GIF)');
+        return;
+      }
+      
+      // Validate file size (max 2MB)
+      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+      if (file.size > maxSize) {
+        setError && setError('Image file is too large. Please upload an image smaller than 2MB.');
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onload = (e) => {
         setInvoiceData(prevData => ({
@@ -80,10 +166,63 @@ const InvoiceForm = ({
     }));
   };
   
+  // Add comprehensive form validation
+  const validateForm = () => {
+    // Required fields
+    const requiredFields = {
+      'Invoice Number': invoiceData.invoiceNumber,
+      'Invoice Date': invoiceData.invoiceDate,
+      'Company Name': invoiceData.senderName,
+      'Client Name': invoiceData.recipientName
+    };
+    
+    // Check required fields
+    for (const [fieldName, value] of Object.entries(requiredFields)) {
+      if (!value || value.trim() === '') {
+        setError(`${fieldName} is required.`);
+        return false;
+      }
+    }
+    
+    // Validate email if provided
+    if (invoiceData.recipientEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(invoiceData.recipientEmail)) {
+        setError('Please enter a valid email address.');
+        return false;
+      }
+    }
+    
+    // Ensure there's at least one invoice item
+    if (invoiceData.items.length === 0) {
+      setError('Please add at least one item to the invoice.');
+      return false;
+    }
+    
+    // Check if any item has a description but no amount
+    const invalidItems = invoiceData.items.filter(
+      item => item.description.trim() !== '' && 
+      ((!item.amountUSD || parseFloat(item.amountUSD) === 0) && 
+       (!item.amountINR || parseFloat(item.amountINR) === 0))
+    );
+    
+    if (invalidItems.length > 0) {
+      setError('All items must have an amount in USD or INR.');
+      return false;
+    }
+    
+    return true;
+  };
+  
   const sendInvoice = async () => {
-    // Validate recipient email
+    // Validate form before sending
+    if (!validateForm()) {
+      return;
+    }
+    
+    // Additional validation for email which is required for sending
     if (!invoiceData.recipientEmail) {
-      alert('Please enter the recipient\'s email address.');
+      setError('Please enter the recipient\'s email address.');
       return;
     }
     
@@ -95,11 +234,11 @@ const InvoiceForm = ({
       const previewElement = document.getElementById('invoicePreview');
       
       if (!previewElement) {
-        // If preview element doesn't exist, show preview first then try again
+        // If preview element doesn't exist, show preview first
         onPreview();
-        setTimeout(() => {
-          sendInvoice();
-        }, 1000);
+        // Then set up a modal to confirm email sending once preview is ready
+        setShowSendModal(true);
+        setIsLoading(false);
         return;
       }
       
@@ -120,18 +259,27 @@ const InvoiceForm = ({
       };
       
       // Send email
-      await emailjs.send('service_y4713fo', 'template_fadjy8l', emailParams);
+      await emailjs.send(
+        import.meta.env.VITE_EMAILJS_SERVICE_ID, 
+        import.meta.env.VITE_EMAILJS_TEMPLATE_ID, 
+        emailParams
+      );
       
       setIsLoading(false);
-      alert('Invoice sent successfully!');
+      setError('Invoice sent successfully!'); // Using error display for success message too
     } catch (error) {
       console.error('Error sending email:', error);
       setIsLoading(false);
-      alert('Failed to send the invoice. Please try again. Error: ' + error.message);
+      setError('Failed to send the invoice: ' + error.message);
     }
   };
   
   const downloadPDF = async () => {
+    // Validate form before downloading
+    if (!validateForm()) {
+      return;
+    }
+    
     // Show loading indicator
     setIsLoading(true);
     
@@ -139,42 +287,58 @@ const InvoiceForm = ({
       // First ensure we're in preview mode
       onPreview();
       
-      // Wait for the preview to render
-      setTimeout(async () => {
-        const previewElement = document.getElementById('invoicePreview');
-        
-        if (!previewElement) {
-          throw new Error('Preview element not found');
-        }
-        
-        const canvas = await html2canvas(previewElement, {
-          scale: 2,
-          useCORS: true,
-          scrollY: 0,
+      // Use a Promise instead of setTimeout for better async handling
+      const generatePDF = async () => {
+        return new Promise((resolve, reject) => {
+          // Check for preview element after a small delay to ensure it's rendered
+          const checkForPreview = () => {
+            const previewElement = document.getElementById('invoicePreview');
+            
+            if (previewElement) {
+              resolve(previewElement);
+            } else {
+              // If not found yet, try again after a short delay
+              setTimeout(checkForPreview, 100);
+            }
+          };
+          
+          // Start checking
+          checkForPreview();
+          
+          // Add a timeout to avoid infinite checking
+          setTimeout(() => reject(new Error('Preview generation timed out')), 5000);
         });
-        
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
-        });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = canvas.width / canvas.height;
-        const imgWidth = pdfWidth;
-        const imgHeight = imgWidth / ratio;
-        
-        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-        pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
-        
-        setIsLoading(false);
-      }, 500);
+      };
+      
+      const previewElement = await generatePDF();
+      
+      const canvas = await html2canvas(previewElement, {
+        scale: 2,
+        useCORS: true,
+        scrollY: 0,
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const ratio = canvas.width / canvas.height;
+      const imgWidth = pdfWidth;
+      const imgHeight = imgWidth / ratio;
+      
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
+      
+      setIsLoading(false);
     } catch (error) {
       console.error('Error generating PDF:', error);
       setIsLoading(false);
-      alert('Failed to generate PDF. Please try again.');
+      setError('Failed to generate PDF: ' + error.message);
     }
   };
   
@@ -186,7 +350,7 @@ const InvoiceForm = ({
         <div className="card">
           <h2 className="card-title">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-              <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .801.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z"/>
+              <path d="M1.92.506a.5.5 0 0 1 .434.14L3 1.293l.646-.647a.5.5 0 0 1 .708 0L5 1.293l.646-.647a.5.5 0 0 1 .708 0L7 1.293l.646-.647a.5.5 0 0 1 .708 0L9 1.293l.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708.13l.5 1A.5.5 0 0 1 15 2v12a.5.5 0 0 1-.053.224l-.5 1a.5.5 0 0 1-.8.13L13 14.707l-.646.647a.5.5 0 0 1-.708 0L11 14.707l-.646.647a.5.5 0 0 1-.708 0L9 14.707l-.646.647a.5.5 0 0 1-.708 0L7 14.707l-.646.647a.5.5 0 0 1-.708 0L5 14.707l-.646.647a.5.5 0 0 1-.708 0L3 14.707l-.646.647a.5.5 0 0 1-.801-.13l-.5-1A.5.5 0 0 1 1 14V2a.5.5 0 0 1 .053-.224l.5-1a.5.5 0 0 1 .367-.27zm.217 1.338L2 2.118v11.764l.137.274.51-.51a.5.5 0 0 1 .707 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.646.647.646-.647a.5.5 0 0 1 .708 0l.509.509.137-.274V2.118l-.137-.274-.51.51a.5.5 0 0 1-.707 0L12 1.707l-.646.647a.5.5 0 0 1-.708 0L10 1.707l-.646.647a.5.5 0 0 1-.708 0L8 1.707l-.646.647a.5.5 0 0 1-.708 0L6 1.707l-.646.647a.5.5 0 0 1-.708 0L4 1.707l-.646.647a.5.5 0 0 1-.708 0l-.509-.51z"/>
               <path d="M3 4.5a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h6a.5.5 0 1 1 0 1h-6a.5.5 0 0 1-.5-.5zm8-6a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5zm0 2a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5z"/>
             </svg>
             Invoice Details
@@ -493,14 +657,14 @@ const InvoiceForm = ({
             Download PDF
           </button>
           
-          <button onClick={sendInvoice} className="btn">
+          <button onClick={() => setShowSendModal(true)} className="btn">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
               <path d="M15.854.146a.5.5 0 0 1 .11.54l-5.819 14.547a.75.75 0 0 1-1.329.124l-3.178-4.995L.643 7.184a.75.75 0 0 1 .124-1.33L15.314.037a.5.5 0 0 1 .54.11ZM6.636 10.07l2.761 4.338L14.13 2.576 6.636 10.07Zm6.787-8.201L1.591 6.602l4.339 2.76 7.494-7.493Z"/>
             </svg>
             Send Invoice
           </button>
           
-          <button onClick={onReset} className="btn btn-secondary">
+          <button onClick={() => setShowResetModal(true)} className="btn btn-secondary">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
               <path fillRule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
               <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
@@ -509,6 +673,55 @@ const InvoiceForm = ({
           </button>
         </div>
       </div>
+      
+      {/* Custom Modals */}
+      <Modal
+        isOpen={showSendModal}
+        onClose={() => setShowSendModal(false)}
+        title="Send Invoice"
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowSendModal(false)}>
+              Cancel
+            </button>
+            <button 
+              className="btn" 
+              onClick={() => {
+                setShowSendModal(false);
+                sendInvoice();
+              }}
+            >
+              Send
+            </button>
+          </>
+        }
+      >
+        <p>Send invoice to {invoiceData.recipientEmail}?</p>
+      </Modal>
+      
+      <Modal
+        isOpen={showResetModal}
+        onClose={() => setShowResetModal(false)}
+        title="New Invoice"
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={() => setShowResetModal(false)}>
+              Cancel
+            </button>
+            <button 
+              className="btn" 
+              onClick={() => {
+                setShowResetModal(false);
+                onReset();
+              }}
+            >
+              Create New
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to create a new invoice? All current data will be lost.</p>
+      </Modal>
     </div>
   );
 };

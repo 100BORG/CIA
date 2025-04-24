@@ -1,94 +1,34 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// MIME types for different file extensions
-const mimeTypes = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.svg': 'image/svg+xml',
-  '.ico': 'image/x-icon'
-};
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Create a server instance without using deprecated properties
-const server = http.createServer((req, res) => {
-  console.log(`[${new Date().toISOString()}] "${req.method} ${req.url}" "${req.headers['user-agent']}"`);
-  
-  // Handle the favicon.ico request directly
-  if (req.url === '/favicon.ico') {
-    const faviconPath = path.join(__dirname, 'favicon.ico');
-    fs.readFile(faviconPath, (err, data) => {
-      if (err) {
-        res.writeHead(404);
-        res.end('Not found');
-        return;
-      }
-      res.writeHead(200, { 'Content-Type': 'image/x-icon' });
-      res.end(data);
-    });
-    return;
-  }
-  
-  // Parse URL to get the file path
-  let filePath = path.join(__dirname, req.url === '/' ? 'index.html' : req.url);
-  
-  // Check if the path exists
-  fs.stat(filePath, (err, stats) => {
-    if (err) {
-      // If the path doesn't exist, try with .html extension
-      if (path.extname(filePath) === '') {
-        filePath += '.html';
-        fs.stat(filePath, (innerErr, innerStats) => {
-          if (innerErr) {
-            res.writeHead(404);
-            res.end('Not found');
-            return;
-          }
-          serveFile(filePath, res);
-        });
-      } else {
-        res.writeHead(404);
-        res.end('Not found');
-      }
-      return;
-    }
-    
-    // If the path is a directory, serve index.html
-    if (stats.isDirectory()) {
-      filePath = path.join(filePath, 'index.html');
-      serveFile(filePath, res);
-      return;
-    }
-    
-    // Serve the file
-    serveFile(filePath, res);
-  });
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Serve static files from the 'dist' directory (Vite's build output)
+app.use(express.static(path.join(__dirname, 'dist')));
+
+// Middleware to log requests
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
+  next();
 });
 
-function serveFile(filePath, res) {
-  const extname = path.extname(filePath);
-  const contentType = mimeTypes[extname] || 'application/octet-stream';
-  
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      res.writeHead(500);
-      res.end(`Server Error: ${err.code}`);
-      return;
-    }
-    
-    // Use setHeader instead of directly setting _headers
-    res.writeHead(200, { 'Content-Type': contentType });
-    res.end(data);
-  });
-}
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}/`);
-  console.log(`Serving files from: ${__dirname}`);
+// For all other routes, serve the index.html file
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
+  console.log(`http://localhost:${PORT}`);
 });
