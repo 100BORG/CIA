@@ -4,6 +4,13 @@ import emailjs from '@emailjs/browser';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+// Initialize EmailJS when component loads
+try {
+  emailjs.init('E6klVgu7C2hAkoxFM'); // Using the same ID as the original app
+} catch (error) {
+  console.error('Error initializing EmailJS:', error);
+}
+
 const InvoiceForm = ({ 
   invoiceData, 
   setInvoiceData, 
@@ -84,11 +91,6 @@ const InvoiceForm = ({
     setIsLoading(true);
     
     try {
-      // Initialize emailjs if not already initialized
-      if (!emailjs.init) {
-        emailjs.init('YOUR_USER_ID'); // Replace with your EmailJS user ID
-      }
-      
       // First generate PDF content
       const previewElement = document.getElementById('invoicePreview');
       

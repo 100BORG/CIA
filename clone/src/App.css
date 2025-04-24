@@ -52,16 +52,21 @@ body {
   font-size: 24px;
   font-weight: bold;
   color: var(--primary-color);
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
 }
+
+.logo img {
+  max-height: 40px;
+  margin-right: 10px;
+}
+
 .logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+  filter: none;
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+  filter: none;
 }
 
 .user-actions {
@@ -104,12 +109,13 @@ body {
 .grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 20px;
+  gap: 25px;
 }
 
 @media (min-width: 768px) {
   .grid {
     grid-template-columns: 1fr 1fr;
+    gap: 30px;
   }
 }
 
@@ -117,8 +123,8 @@ body {
   background-color: var(--card-bg);
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 25px;
+  margin-bottom: 25px;
 }
 
 .card-title {
@@ -131,18 +137,18 @@ body {
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 18px;
 }
 
 label {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
   font-weight: bold;
 }
 
 input, textarea, select {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid var(--border-color);
   border-radius: 5px;
   font-size: 16px;
@@ -164,26 +170,46 @@ input:focus, textarea:focus, select:focus {
 table {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 15px;
 }
 
 table th, table td {
-  padding: 10px;
+  padding: 12px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
 
 table th {
   background-color: var(--light-gray);
+  font-weight: bold;
 }
 
 .item-row td {
   border-bottom: none;
+  vertical-align: top;
 }
 
 .nested-row td {
   padding-left: 20px;
   font-size: 0.9em;
   color: #666;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+/* Improve invoice items table layout */
+.invoice-items-table {
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+
+.invoice-items-table input,
+.invoice-items-table textarea {
+  min-height: auto;
+  padding: 8px;
+}
+
+.invoice-items-table .item-description {
+  min-height: 60px;
 }
 
 .text-right {
@@ -208,29 +234,33 @@ table th {
   z-index: 1000;
   overflow: auto;
   padding: 40px;
+  color: #333;
 }
 
 .preview-container {
   max-width: 800px;
   margin: 0 auto;
+  background: white;
 }
 
 .preview-header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 30px;
 }
 
 .preview-logo {
-  max-width: 200px;
-  max-height: 100px;
+  max-width: 180px;
+  max-height: 90px;
 }
 
 .preview-title {
   text-align: center;
-  font-size: 24px;
+  font-size: 28px;
   margin-bottom: 20px;
   color: var(--primary-color);
+  font-weight: bold;
 }
 
 .preview-grid {
@@ -242,12 +272,24 @@ table th {
 
 .preview-details h3 {
   color: var(--primary-color);
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   font-size: 18px;
+  font-weight: bold;
+}
+
+.preview-details p {
+  margin-bottom: 8px;
+  line-height: 1.5;
 }
 
 .preview-items {
   margin-bottom: 30px;
+}
+
+.preview-items h3 {
+  color: var(--primary-color);
+  margin-bottom: 12px;
+  font-weight: bold;
 }
 
 .preview-totals {
@@ -261,6 +303,12 @@ table th {
   padding-top: 20px;
   border-top: 1px solid var(--border-color);
   font-size: 14px;
+}
+
+.preview-notes h3 {
+  color: var(--primary-color);
+  margin-bottom: 12px;
+  font-weight: bold;
 }
 
 /* Login Page Styles */
@@ -313,6 +361,9 @@ table th {
   z-index: 9999;
   color: white;
   font-size: 1.2rem;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s, visibility 0.3s;
 }
 
 .spinner {
@@ -321,8 +372,8 @@ table th {
   border-radius: 50%;
   width: 50px;
   height: 50px;
-  animation: spin 2s linear infinite;
-  margin-right: 10px;
+  animation: spin 1.5s linear infinite;
+  margin-right: 15px;
 }
 
 @keyframes spin {
@@ -399,4 +450,108 @@ table th {
 
 .read-the-docs {
   color: #888;
+}
+
+/* Error Display Component */
+.error-display {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-width: 80%;
+}
+
+.error-content {
+  background-color: #f44336;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  animation: slide-in 0.3s ease-out;
+}
+
+.error-message {
+  margin-right: 20px;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Debug and Diagnostic Pages */
+.debug-container,
+.diagnostic-container,
+.demo-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.debug-title,
+.diagnostic-title,
+.demo-title {
+  color: var(--primary-color);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.card-nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.test-section {
+  margin-bottom: 20px;
+}
+
+.test-section h3 {
+  margin-bottom: 10px;
+  color: var(--primary-color);
+}
+
+.success {
+  color: #4caf50;
+}
+
+.error {
+  color: #f44336;
+}
+
+.test-result {
+  margin-bottom: 5px;
+}
+
+pre {
+  background-color: var(--light-gray);
+  padding: 15px;
+  border-radius: 5px;
+  overflow: auto;
+  max-height: 200px;
+  font-family: monospace;
+  margin-top: 10px;
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import '../App.css';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoicePreview from '../components/InvoicePreview';
+import { defaultLogo, companyName } from '../assets/logoData';
 
 const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const [showPreview, setShowPreview] = useState(false);
@@ -10,8 +11,8 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     invoiceDate: '',
     taxRate: '5',
     currency: 'USD',
-    logoUrl: '',
-    senderName: '',
+    logoUrl: defaultLogo, // Set default logo
+    senderName: companyName, // Set default company name
     senderAddress: '',
     senderGSTIN: '',
     recipientName: '',
@@ -102,8 +103,8 @@ IFSC Code:`,
         invoiceDate: formatDateForInput(today),
         taxRate: '5',
         currency: 'USD',
-        logoUrl: '',
-        senderName: '',
+        logoUrl: defaultLogo, // Set default logo on reset
+        senderName: companyName, // Set default company name on reset
         senderAddress: '',
         senderGSTIN: '',
         recipientName: '',
@@ -138,16 +139,24 @@ IFSC Code:`,
   return (
     <div className="container">
       <header className="header">
-        <div className="logo">Invoice Generator</div>
+        <div className="logo">
+          <img 
+            src={defaultLogo} 
+            alt={companyName}
+            style={{ maxHeight: '40px' }}
+          />
+          {companyName}
+        </div>
         <div className="user-actions">
           <div className="auth-status">
             <span className="status-dot"></span>
-            <span>Logged in</span>
+            <span>{localStorage.getItem('userEmail') || 'Logged in'}</span>
           </div>
           <button 
             onClick={toggleDarkMode} 
             className="btn btn-secondary"
             title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            style={{ padding: '8px 15px' }}
           >
             {darkMode ? '☀️' : '🌙'}
           </button>

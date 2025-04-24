@@ -4,14 +4,23 @@ import './App.css'
 import LoginPage from './pages/LoginPage'
 import InvoicePage from './pages/InvoicePage'
 import NotFoundPage from './pages/NotFoundPage'
+import DiagnosticPage from './pages/DiagnosticPage'
+import DebugPage from './pages/DebugPage'
+import DemoPage from './pages/DemoPage'
+import ErrorDisplay from './components/ErrorDisplay'
+
+// Session timeout in milliseconds (30 minutes)
+const SESSION_TIMEOUT = 30 * 60 * 1000;
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
+  const [error, setError] = useState(null)
+  const [sessionTimer, setSessionTimer] = useState(null)
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Check authentication on initial load
+  // Check authentication and dark mode on initial load
   useEffect(() => {
     const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true'
     setIsAuthenticated(isLoggedIn)
@@ -22,7 +31,20 @@ function App() {
     if (savedDarkMode) {
       document.body.classList.add('dark-mode')
     }
+
+    // Setup global error handler
+    window.addEventListener('error', handleGlobalError)
+    return () => {
+      window.removeEventListener('error', handleGlobalError)
+    }
   }, [])
+
+  // Handle global errors
+  const handleGlobalError = (event) => {
+    console.error('Global error:', event.error)
+    const errorMessage = event.error ? event.error.message : 'Unknown error'
+    setError(`Error: ${errorMessage}`)
+  }
 
   // Update body class when dark mode changes
   useEffect(() => {
@@ -34,11 +56,46 @@ function App() {
     localStorage.setItem('darkMode', darkMode)
   }, [darkMode])
 
+  // Setup session timeout
+  useEffect(() => {
+    if (isAuthenticated) {
+      // Clear any existing timer
+      if (sessionTimer) clearTimeout(sessionTimer)
+      
+      // Start new timer
+      const timer = setTimeout(() => {
+        // Get last active time from local storage
+        const lastActivity = localStorage.getItem('lastActivity')
+        const now = new Date().getTime()
+        
+        // If it's been too long since the last activity, log the user out
+        if (lastActivity && now - parseInt(lastActivity) > SESSION_TIMEOUT) {
+          handleLogout()
+          setError('Your session has expired. Please log in again.')
+        }
+      }, SESSION_TIMEOUT)
+      
+      setSessionTimer(timer)
+      
+      // Update last activity time
+      localStorage.setItem('lastActivity', new Date().getTime().toString())
+    }
+    
+    return () => {
+      if (sessionTimer) clearTimeout(sessionTimer)
+    }
+  }, [isAuthenticated, location])
+
   // Redirect based on authentication status
   useEffect(() => {
+    // Only redirect for main app routes that require authentication
     if (isAuthenticated && location.pathname === '/login') {
       navigate('/')
-    } else if (!isAuthenticated && location.pathname !== '/login') {
+    } else if (!isAuthenticated && 
+              location.pathname !== '/login' && 
+              location.pathname !== '/demo' && 
+              location.pathname !== '/debug' && 
+              location.pathname !== '/diagnostic') {
       navigate('/login')
     }
   }, [isAuthenticated, location.pathname, navigate])
@@ -47,15 +104,20 @@ function App() {
     localStorage.setItem('isLoggedIn', 'true')
     localStorage.setItem('userEmail', email)
     localStorage.setItem('lastLogin', new Date().toString())
+    localStorage.setItem('lastActivity', new Date().getTime().toString())
     setIsAuthenticated(true)
     navigate('/')
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn')
-    localStorage.removeItem('userEmail')
-    setIsAuthenticated(false)
-    navigate('/login')
+    const hasUnsavedChanges = confirm('Are you sure you want to sign out? Any unsaved changes will be lost.')
+    
+    if (hasUnsavedChanges) {
+      localStorage.removeItem('isLoggedIn')
+      localStorage.removeItem('userEmail')
+      setIsAuthenticated(false)
+      navigate('/login')
+    }
   }
 
   const toggleDarkMode = () => {
@@ -64,6 +126,14 @@ function App() {
 
   return (
     <div className="App">
+      {error && (
+        <ErrorDisplay 
+          error={error} 
+          onClose={() => setError(null)} 
+          duration={5000} 
+        />
+      )}
+      
       <Routes>
         <Route path="/login" element={
           isAuthenticated ? 
@@ -80,6 +150,11 @@ function App() {
             /> : 
             <Navigate to="/login" replace />
         } />
+
+        {/* Debug and diagnostic routes - no auth required */}
+        <Route path="/debug" element={<DebugPage />} />
+        <Route path="/diagnostic" element={<DiagnosticPage />} />
+        <Route path="/demo" element={<DemoPage />} />
         
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
