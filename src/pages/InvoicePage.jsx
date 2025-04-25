@@ -1,18 +1,28 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import '../App.css';
 import InvoiceForm from '../components/InvoiceForm';
 import InvoicePreview from '../components/InvoicePreview';
 import { defaultLogo, companyName } from '../assets/logoData';
 
 const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
+  
+  // Get the selected company from localStorage if available
+  const [selectedCompany, setSelectedCompany] = useState(() => {
+    const companyData = localStorage.getItem('selectedCompany');
+    return companyData ? JSON.parse(companyData) : null;
+  });
+  
   const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: '',
     invoiceDate: '',
     taxRate: '5',
     currency: 'USD',
-    logoUrl: defaultLogo, // Set default logo
-    senderName: companyName, // Set default company name
+    logoUrl: selectedCompany?.logo || defaultLogo, // Use selected company logo if available
+    senderName: selectedCompany?.name || companyName, // Use selected company name if available
     senderAddress: '',
     senderGSTIN: '',
     recipientName: '',
@@ -103,8 +113,8 @@ IFSC Code:`,
         invoiceDate: formatDateForInput(today),
         taxRate: '5',
         currency: 'USD',
-        logoUrl: defaultLogo, // Set default logo on reset
-        senderName: companyName, // Set default company name on reset
+        logoUrl: selectedCompany?.logo || defaultLogo, // Use selected company logo if available
+        senderName: selectedCompany?.name || companyName, // Use selected company name if available
         senderAddress: '',
         senderGSTIN: '',
         recipientName: '',
@@ -139,13 +149,13 @@ IFSC Code:`,
   return (
     <div className="container">
       <header className="header">
-        <div className="logo">
+        <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
           <img 
-            src={defaultLogo} 
-            alt={companyName}
+            src={selectedCompany?.logo || defaultLogo} 
+            alt={selectedCompany?.name || companyName}
             style={{ maxHeight: '40px' }}
           />
-          {companyName}
+          {selectedCompany?.name || companyName}
         </div>
         <div className="user-actions">
           <div className="auth-status">
@@ -160,6 +170,7 @@ IFSC Code:`,
           >
             {darkMode ? '☀️' : '🌙'}
           </button>
+          <button onClick={() => navigate('/profile')} className="btn btn-secondary">Profile</button>
           <button onClick={onLogout} className="btn">Logout</button>
         </div>
       </header>

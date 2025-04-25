@@ -3,6 +3,8 @@ import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-
 import './App.css'
 import LoginPage from './pages/LoginPage'
 import InvoicePage from './pages/InvoicePage'
+import DashboardPage from './pages/DashboardPage'
+import ProfilePage from './pages/ProfilePage'
 import NotFoundPage from './pages/NotFoundPage'
 import DiagnosticPage from './pages/DiagnosticPage'
 import DebugPage from './pages/DebugPage'
@@ -93,7 +95,9 @@ function App() {
   useEffect(() => {
     // Only redirect for main app routes that require authentication
     if (isAuthenticated && location.pathname === '/login') {
-      navigate('/')
+      navigate('/dashboard')
+    } else if (isAuthenticated && location.pathname === '/') {
+      navigate('/dashboard')
     } else if (!isAuthenticated && 
               location.pathname !== '/login' && 
               location.pathname !== '/demo' && 
@@ -159,17 +163,43 @@ function App() {
       <Routes>
         <Route path="/login" element={
           isAuthenticated ? 
-            <Navigate to="/" replace /> : 
+            <Navigate to="/dashboard" replace /> : 
             <LoginPage onLogin={handleLogin} />
         } />
         
-        <Route path="/" element={
+        <Route path="/dashboard" element={
+          isAuthenticated ? 
+            <DashboardPage 
+              onLogout={handleLogout} 
+              darkMode={darkMode} 
+              toggleDarkMode={toggleDarkMode}
+            /> : 
+            <Navigate to="/login" replace />
+        } />
+        
+        <Route path="/invoice/:id" element={
           isAuthenticated ? 
             <InvoicePage 
               onLogout={handleLogout} 
               darkMode={darkMode} 
               toggleDarkMode={toggleDarkMode}
             /> : 
+            <Navigate to="/login" replace />
+        } />
+        
+        <Route path="/invoice/new" element={
+          isAuthenticated ? 
+            <InvoicePage 
+              onLogout={handleLogout} 
+              darkMode={darkMode} 
+              toggleDarkMode={toggleDarkMode}
+            /> : 
+            <Navigate to="/login" replace />
+        } />
+        
+        <Route path="/profile" element={
+          isAuthenticated ? 
+            <ProfilePage /> : 
             <Navigate to="/login" replace />
         } />
 

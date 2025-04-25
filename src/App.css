@@ -1,22 +1,38 @@
 :root {
-  --primary-color: #e07fa9;
-  --secondary-color: #e8f4f8;
-  --text-color: #333;
-  --light-gray: #f8f8f8;
-  --border-color: #ddd;
-  --bg-color: #f5f5f5;
-  --card-bg: white;
+  /* Updated color theme with modern blue palette */
+  --primary-color: #3b82f6; /* Blue instead of Yellow */
+  --primary-hover: #2563eb; /* Darker blue for hover states */
+  --accent-color: #8b5cf6; /* Purple for accents instead of amber */
+  --secondary-color: #f3f4f6; /* Light gray kept the same */
+  --text-color: #111827; /* Dark text kept the same */
+  --light-text: #4b5563; /* Medium gray for labels kept the same */
+  --border-color: #e5e7eb;
+  --card-bg: #ffffff;
+  --sidebar-bg: #1e293b; /* Darker blue sidebar background */
+  --sidebar-text: #ffffff; /* Light text for sidebar */
+  --light-gray: #f9fafb;
+  --dark-bg: #1f2937;
+  --dark-card: #374151;
+  --dark-text: #f9fafb;
+  --status-completed: #10b981; /* Teal green */
+  --status-in-progress: #f59e0b; /* Amber yellow */
+  --status-pending: #ef4444; /* Red kept the same */
+
+  /* Added new UI enhancement variables */
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  --transition-speed: 0.2s;
 }
 
 /* Dark mode variables */
 body.dark-mode {
-  --primary-color: #ff9ec5;
-  --secondary-color: #1e3a47;
-  --text-color: #f0f0f0;
-  --light-gray: #2c2c2c;
-  --border-color: #444;
-  --bg-color: #222;
-  --card-bg: #333;
+  --card-bg: #1e2130;
+  --text-color: #f9fafb;
+  --light-text: #d1d5db;
+  --secondary-color: #374151;
+  --border-color: #4b5563;
+  --sidebar-bg: #111827;
+  --sidebar-text: #f9fafb;
+  --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
 * {
@@ -55,6 +71,7 @@ body {
   display: flex;
   align-items: center;
   margin-bottom: 0;
+  transition: color var(--transition-speed) ease;
 }
 
 .logo img {
@@ -64,6 +81,7 @@ body {
 
 .logo:hover {
   filter: none;
+  color: var(--accent-color);
 }
 .logo.react:hover {
   filter: none;
@@ -82,11 +100,14 @@ body {
   border-radius: 50px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  transition: all var(--transition-speed);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn:hover {
-  background-color: #d06a96;
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
 .btn-secondary {
@@ -95,7 +116,9 @@ body {
 }
 
 .btn-secondary:hover {
-  background-color: #d9e9ed;
+  background-color: #e2e8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .btn-icon {
@@ -103,7 +126,12 @@ body {
   border: none;
   font-size: 18px;
   cursor: pointer;
-  color: #ff6b6b;
+  color: var(--accent-color);
+  transition: all var(--transition-speed);
+}
+
+.btn-icon:hover {
+  transform: scale(1.1);
 }
 
 .grid {
@@ -122,9 +150,15 @@ body {
 .card {
   background-color: var(--card-bg);
   border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--card-shadow);
   padding: 25px;
   margin-bottom: 25px;
+  transition: box-shadow var(--transition-speed), transform var(--transition-speed);
+}
+
+.card:hover {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.07);
+  transform: translateY(-2px);
 }
 
 .card-title {
@@ -462,7 +496,7 @@ table th {
 }
 
 .error-content {
-  background-color: #f44336;
+  background-color: #ef4444;
   color: white;
   padding: 15px 20px;
   border-radius: 5px;
@@ -623,4 +657,425 @@ pre {
 @keyframes scaleIn {
   from { transform: scale(0.9); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
+}
+
+/* Dashboard-specific styles */
+.dashboard-container {
+  display: grid;
+  grid-template-areas: 
+    "sidebar topbar"
+    "sidebar main";
+  grid-template-columns: 250px 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.dark-mode .dashboard-container {
+  background-color: var(--dark-bg);
+}
+
+.dashboard-sidebar {
+  grid-area: sidebar;
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.dashboard-main {
+  grid-area: main;
+  padding: 20px;
+  overflow-y: auto;
+  background-color: var(--light-gray);
+  transition: background-color var(--transition-speed);
+}
+
+.company-logo-container {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.main-company-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+}
+
+.company-list {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.company-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.company-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.company-item.active {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.company-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  object-fit: contain;
+}
+
+.company-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-footer {
+  padding: 15px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-logout {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--sidebar-text);
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  font-size: 14px;
+}
+
+.btn-logout:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.dashboard-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+  width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--light-text);
+}
+
+.search-container input {
+  padding: 10px 10px 10px 35px;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  width: 100%;
+  transition: all var(--transition-speed);
+}
+
+.search-container input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.btn-create {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-create:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.invoice-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.invoice-card {
+  background-color: var(--card-bg);
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: var(--card-shadow);
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.invoice-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.invoice-card-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.invoice-company-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.invoice-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.invoice-number {
+  font-weight: bold;
+  color: var(--text-color);
+}
+
+.invoice-company {
+  color: var(--light-text);
+  font-size: 0.9em;
+}
+
+.invoice-card-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.invoice-amount {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.amount {
+  font-size: 1.5em;
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+.currency {
+  color: var(--light-text);
+  font-size: 0.9em;
+}
+
+.invoice-date, .invoice-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.label {
+  color: var(--light-text);
+  font-size: 0.9em;
+}
+
+.value {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 15px;
+  font-size: 0.8em;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.status.paid {
+  background-color: var(--status-completed);
+  color: white;
+}
+
+.status.pending {
+  background-color: var(--status-pending);
+  color: white;
+}
+
+.no-invoices-message {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 50px;
+  background-color: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: var(--card-shadow);
+}
+
+.auth-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--status-completed);
+}
+
+.btn-clear-filter {
+  margin-top: 10px;
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: all var(--transition-speed);
+}
+
+.btn-clear-filter:hover {
+  background-color: var(--border-color);
+}
+
+/* Theme Switch Styling */
+.theme-switch-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 30px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-switch .slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #e2e8f0;
+  border-radius: 30px;
+  transition: 0.4s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px;
+}
+
+.theme-switch .slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.4s;
+  z-index: 2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.theme-switch .sun-icon,
+.theme-switch .moon-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-color);
+  z-index: 1;
+  transition: 0.4s;
+}
+
+.theme-switch .sun-icon {
+  color: #f59e0b;
+}
+
+.theme-switch .moon-icon {
+  color: #6366f1;
+}
+
+input:checked + .slider {
+  background-color: #1e293b;
+}
+
+input:checked + .slider:before {
+  transform: translateX(30px);
+}
+
+/* Additional animation for the icons */
+input:not(:checked) + .slider .sun-icon {
+  opacity: 1;
+}
+
+input:not(:checked) + .slider .moon-icon {
+  opacity: 0.5;
+}
+
+input:checked + .slider .sun-icon {
+  opacity: 0.5;
+}
+
+input:checked + .slider .moon-icon {
+  opacity: 1;
+}
+
+/* Add a nice glow effect on hover */
+.theme-switch:hover .slider:before {
+  box-shadow: 0 0 8px var(--primary-color);
+}
+
+/* Animation for dark mode transition */
+body, .card, .dashboard-sidebar, .dashboard-topbar, input, select, textarea, button {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
