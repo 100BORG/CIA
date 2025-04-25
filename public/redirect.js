@@ -2,27 +2,36 @@
 // This script runs before React takes over routing
 
 (function() {
+  // Base path for GitHub Pages deployment
+  const basePath = '/CIA';
+  
   // Get current path
   const currentPath = window.location.pathname;
   
-  // Non-protected routes
+  // Convert absolute paths to include the base path for GitHub Pages
+  const adjustPath = (path) => {
+    if (path === '/') return basePath + '/';
+    return basePath + path;
+  };
+  
+  // Non-protected routes - with adjusted paths
   const publicRoutes = [
-    '/login',
-    '/debug',
-    '/diagnostic',
-    '/demo'
+    basePath + '/login',
+    basePath + '/debug',
+    basePath + '/diagnostic',
+    basePath + '/demo'
   ];
   
   // Check if user is logged in
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
   
   // Redirect logic
-  if (!isLoggedIn && !publicRoutes.includes(currentPath) && currentPath !== '/') {
+  if (!isLoggedIn && !publicRoutes.includes(currentPath) && currentPath !== basePath + '/') {
     // Not logged in and trying to access protected route - redirect to login
-    window.location.href = '/login';
-  } else if (isLoggedIn && currentPath === '/login') {
+    window.location.href = adjustPath('/login');
+  } else if (isLoggedIn && currentPath === basePath + '/login') {
     // Already logged in and trying to access login page - redirect to app
-    window.location.href = '/';
+    window.location.href = adjustPath('/');
   }
   
   // Check for session timeout
@@ -36,8 +45,8 @@
       localStorage.removeItem('isLoggedIn');
       localStorage.removeItem('userEmail');
       
-      if (currentPath !== '/login') {
-        window.location.href = '/login?timeout=true';
+      if (currentPath !== basePath + '/login') {
+        window.location.href = adjustPath('/login?timeout=true');
       }
     } else {
       // Update activity timestamp

@@ -5,11 +5,12 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "npm run build && node server.js",
+    "start": "node server.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "serve": "node --watch server.js"
+    "serve": "node --watch server.js",
+    "dev:full": "npm run build && npm run serve"
   },
   "keywords": [
     "invoice",
@@ -33,6 +34,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.0.0",
+    "gh-pages": "^6.3.0",
     "vite": "^4.3.2"
   }
 }

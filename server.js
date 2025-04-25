@@ -8,27 +8,25 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files from the 'dist' directory (Vite's build output)
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'dist')));
 
-// Middleware to log requests
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
-  next();
+// API routes can be defined here
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'API is running' });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// For all other routes, serve the index.html file
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Start the server
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
-  console.log(`http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

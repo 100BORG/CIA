@@ -51,13 +51,22 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
   // Handle change of item fields
   const handleItemChange = (index, field, value) => {
     const updatedItems = [...items];
-    updatedItems[index][field] = value;
+    
+    // Handle text fields and number fields differently
+    if (field === 'name' || field === 'description') {
+      // For text fields, store the string value directly
+      updatedItems[index][field] = value;
+    } else {
+      // For amount fields, convert the input value to a number
+      const numericValue = parseFloat(value) || 0;
+      updatedItems[index][field] = numericValue;
 
-    // If amount fields are updated, calculate the other currency equivalent
-    if (field === 'amountUSD') {
-      updatedItems[index].amountINR = (parseFloat(value) || 0) * exchangeRate;
-    } else if (field === 'amountINR') {
-      updatedItems[index].amountUSD = (parseFloat(value) || 0) / exchangeRate;
+      // If amount fields are updated, calculate the other currency equivalent
+      if (field === 'amountUSD') {
+        updatedItems[index].amountINR = numericValue * exchangeRate;
+      } else if (field === 'amountINR') {
+        updatedItems[index].amountUSD = numericValue / exchangeRate;
+      }
     }
 
     setItems(updatedItems);
