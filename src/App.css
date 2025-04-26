@@ -340,11 +340,27 @@ table th {
   font-weight: bold;
 }
 
+.preview-items table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 15px;
+}
+
+.preview-items table th {
+  background-color: var(--card-bg);
+  color: var(--preview-text);
+  font-weight: bold;
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-color);
+}
+
 .preview-items table tr td {
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
   color: var(--preview-text);
+  background-color: var(--preview-bg);
 }
 
 .preview-items table tr.nested-row td {
@@ -352,6 +368,26 @@ table th {
   font-size: 1em;
   color: var(--preview-text);
   border-bottom: 1px solid var(--border-color);
+  background-color: var(--preview-bg);
+}
+
+/* Dark mode specific styles */
+body.dark-mode .preview-items table th {
+  background-color: var(--dark-card);
+  color: var(--dark-text);
+  border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .preview-items table tr td {
+  background-color: var(--dark-card);
+  color: var(--dark-text);
+  border-bottom-color: var(--border-color);
+}
+
+body.dark-mode .preview-items table tr.nested-row td {
+  background-color: var(--dark-card);
+  color: var(--dark-text);
+  border-bottom-color: var(--border-color);
 }
 
 .preview-totals {
