@@ -164,9 +164,6 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
         </div>
         
         <div className="sidebar-footer">
-          <button onClick={() => navigate('/profile')} className="btn-icon" title="Profile">
-            <FiUser />
-          </button>
           <button onClick={onLogout} className="btn-logout" title="Logout">
             <FiLogOut style={{ marginRight: '5px' }} /> Logout
           </button>
