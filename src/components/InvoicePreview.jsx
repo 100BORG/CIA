@@ -112,9 +112,12 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
                     <td className="text-right">${parseFloat(item.amountUSD).toFixed(2)}</td>
                     <td className="text-right">₹{parseFloat(item.amountINR).toFixed(2)}</td>
                   </tr>
-                  {item.nestedRows?.map((row, rowIndex) => (
+                  {item.nestedRows?.map((nestedRow, rowIndex) => (
                     <tr key={`${index}-${rowIndex}`} className="nested-row">
-                      <td colSpan={4}>{row}</td>
+                      <td></td>
+                      <td>{nestedRow.description || 'Additional description'}</td>
+                      <td className="text-right">${parseFloat(nestedRow.amountUSD).toFixed(2)}</td>
+                      <td className="text-right">₹{parseFloat(nestedRow.amountINR).toFixed(2)}</td>
                     </tr>
                   ))}
                 </React.Fragment>

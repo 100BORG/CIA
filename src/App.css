@@ -232,7 +232,7 @@ table th {
 .nested-row td {
   padding-left: 20px;
   font-size: 0.9em;
-  color: #666;
+  color: var(--text-color);
   border-bottom: 1px dashed var(--border-color);
 }
 
@@ -338,6 +338,20 @@ table th {
   margin-bottom: 15px;
   font-size: 18px;
   font-weight: bold;
+}
+
+.preview-items table tr td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--preview-text);
+}
+
+.preview-items table tr.nested-row td {
+  padding-left: 20px;
+  font-size: 1em;
+  color: var(--preview-text);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .preview-totals {
@@ -1292,7 +1306,7 @@ body, .card, .dashboard-sidebar, .dashboard-topbar, input, select, textarea, but
 .invoice-items-table .nested-row td {
   padding-left: 20px;
   font-size: 0.9em;
-  color: var(--light-text);
+  color: var(--text-color);
   border-bottom: 1px dashed var(--border-color);
 }
 
