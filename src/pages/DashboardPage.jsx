@@ -26,6 +26,12 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const [showAllInvoices, setShowAllInvoices] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  // Invoice status state
+  const [invoiceStatuses, setInvoiceStatuses] = useState(() => {
+    const savedStatuses = localStorage.getItem('invoiceStatuses');
+    return savedStatuses ? JSON.parse(savedStatuses) : {};
+  });
+  
   // Sort state
   const [sortField, setSortField] = useState('date');
   const [sortDirection, setSortDirection] = useState('desc');
@@ -38,6 +44,11 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       setShowAllInvoices(false);
     }
   }, [selectedCompany]);
+  
+  // Save invoice statuses to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('invoiceStatuses', JSON.stringify(invoiceStatuses));
+  }, [invoiceStatuses]);
   
   const handleCompanySelect = (company) => {
     setSelectedCompany(company);
@@ -118,6 +129,32 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
 
   const handleCreateInvoice = () => {
     navigate('/invoice/new');
+  };
+  
+  // Function to toggle invoice status
+  const toggleInvoiceStatus = (e, invoiceId) => {
+    e.stopPropagation(); // Prevent navigating to invoice detail page
+    
+    setInvoiceStatuses(prevStatuses => {
+      const newStatuses = { ...prevStatuses };
+      const statusOptions = ['Paid', 'Pending', 'Draft', 'Cancelled'];
+      
+      if (newStatuses[invoiceId]) {
+        // Find current status in the cycle
+        const currentIndex = statusOptions.indexOf(newStatuses[invoiceId]);
+        // Move to next status (or back to first if at end)
+        const nextIndex = (currentIndex + 1) % statusOptions.length;
+        newStatuses[invoiceId] = statusOptions[nextIndex];
+      } else {
+        // If no saved status, set the next status after the default
+        const defaultStatus = parseInt(invoiceId.split('-')[1]) % 2 === 0 ? 'Paid' : 'Pending';
+        const defaultIndex = statusOptions.indexOf(defaultStatus);
+        const nextIndex = (defaultIndex + 1) % statusOptions.length;
+        newStatuses[invoiceId] = statusOptions[nextIndex];
+      }
+      
+      return newStatuses;
+    });
   };
   
   return (
@@ -363,7 +400,10 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
               const invoiceNumber = `2025-${1000 + index}`;
               const invoiceDate = new Date(2025, 3, 1 + index);
               const invoiceAmount = 2500 + (index * 100);
-              const invoiceStatus = index % 2 === 0 ? 'Paid' : 'Pending';
+              
+              // Get saved status or use default
+              const defaultStatus = index % 2 === 0 ? 'Paid' : 'Pending';
+              const invoiceStatus = invoiceStatuses[invoiceNumber] || defaultStatus;
               
               return (
                 <div key={index} className="invoice-card" onClick={() => navigate(`/invoice/${1000 + index}`)}>
@@ -388,7 +428,19 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                       <span className="value">{invoiceDate.toLocaleDateString()}</span>
                     </div>
                     <div className="invoice-status">
-                      <span className={`status ${invoiceStatus.toLowerCase()}`}>
+                      <span 
+                        className={`status ${invoiceStatus.toLowerCase()}`} 
+                        onClick={(e) => toggleInvoiceStatus(e, invoiceNumber)}
+                        style={{ 
+                          cursor: 'pointer', 
+                          position: 'relative',
+                          backgroundColor: invoiceStatus === 'Paid' ? 'var(--success-color, #4caf50)' : 
+                                           invoiceStatus === 'Pending' ? 'var(--warning-color, #ff9800)' :
+                                           invoiceStatus === 'Draft' ? 'var(--info-color, #2196f3)' :
+                                           invoiceStatus === 'Cancelled' ? 'var(--danger-color, #f44336)' : 'gray'
+                        }}
+                        title="Click to change status"
+                      >
                         {invoiceStatus}
                       </span>
                     </div>
