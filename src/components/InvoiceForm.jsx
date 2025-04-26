@@ -3,7 +3,7 @@ import InvoiceItemsTable from './InvoiceItemsTable';
 import emailService from '../services/emailService';
 import pdfService from '../services/pdfService';
 import exchangeRateService from '../services/exchangeRateService';
-import { useError } from '../context/ErrorContext';
+import { useNotification } from '../context/ErrorContext';
 import Modal from './Modal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -21,7 +21,7 @@ const InvoiceForm = ({
   const [exchangeRate, setExchangeRate] = useState(82);
   const [showSendModal, setShowSendModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
-  const { setError } = useError();
+  const { setNotification } = useNotification();
   
   // Fetch exchange rate on component mount
   useEffect(() => {
@@ -122,14 +122,14 @@ const InvoiceForm = ({
       // Validate file type
       const validTypes = ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif'];
       if (!validTypes.includes(file.type)) {
-        setError && setError('Please upload a valid image file (JPEG, PNG, SVG, or GIF)');
+        setNotification('Please upload a valid image file (JPEG, PNG, SVG, or GIF)', 'error');
         return;
       }
       
       // Validate file size (max 2MB)
       const maxSize = 2 * 1024 * 1024; // 2MB in bytes
       if (file.size > maxSize) {
-        setError && setError('Image file is too large. Please upload an image smaller than 2MB.');
+        setNotification('Image file is too large. Please upload an image smaller than 2MB.', 'error');
         return;
       }
       
@@ -164,7 +164,7 @@ const InvoiceForm = ({
     // Check required fields
     for (const [fieldName, value] of Object.entries(requiredFields)) {
       if (!value || value.trim() === '') {
-        setError(`${fieldName} is required.`);
+        setNotification(`${fieldName} is required.`, 'error');
         return false;
       }
     }
@@ -173,14 +173,14 @@ const InvoiceForm = ({
     if (invoiceData.recipientEmail) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(invoiceData.recipientEmail)) {
-        setError('Please enter a valid email address.');
+        setNotification('Please enter a valid email address.', 'error');
         return false;
       }
     }
     
     // Ensure there's at least one invoice item
     if (invoiceData.items.length === 0) {
-      setError('Please add at least one item to the invoice.');
+      setNotification('Please add at least one item to the invoice.', 'error');
       return false;
     }
     
@@ -192,7 +192,7 @@ const InvoiceForm = ({
     );
     
     if (invalidItems.length > 0) {
-      setError('All items must have an amount in USD or INR.');
+      setNotification('All items must have an amount in USD or INR.', 'error');
       return false;
     }
     
@@ -207,7 +207,7 @@ const InvoiceForm = ({
     
     // Additional validation for email which is required for sending
     if (!invoiceData.recipientEmail) {
-      setError('Please enter the recipient\'s email address.');
+      setNotification('Please enter the recipient\'s email address.', 'error');
       return;
     }
     
@@ -247,11 +247,11 @@ const InvoiceForm = ({
       await emailService.sendInvoice(emailParams);
       
       setIsLoading(false);
-      setError('Invoice sent successfully!'); // Using error display for success message too
+      setNotification('Invoice sent successfully!', 'success');
     } catch (error) {
       console.error('Error sending email:', error);
       setIsLoading(false);
-      setError('Failed to send the invoice: ' + error.message);
+      setNotification('Failed to send the invoice: ' + error.message, 'error');
     }
   };
   
@@ -279,13 +279,14 @@ const InvoiceForm = ({
         );
         
         setIsLoading(false);
+        setNotification('PDF downloaded successfully!', 'success');
       } catch (error) {
         throw new Error(`Failed to generate preview: ${error.message}`);
       }
     } catch (error) {
       console.error('Error generating PDF:', error);
       setIsLoading(false);
-      setError('Failed to generate PDF: ' + error.message);
+      setNotification('Failed to generate PDF: ' + error.message, 'error');
     }
   };
   

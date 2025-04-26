@@ -156,7 +156,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
           <div 
             className="company-item"
             style={{ marginTop: '10px', color: 'var(--light-text)' }}
-            onClick={() => navigate('/profile')}
+            onClick={() => navigate('/company')}
           >
             <FiPlus className="company-icon" />
             <span className="company-name">Add New Company</span>
@@ -166,9 +166,6 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
         <div className="sidebar-footer">
           <button onClick={() => navigate('/profile')} className="btn-icon" title="Profile">
             <FiUser />
-          </button>
-          <button onClick={() => navigate('/diagnostics')} className="btn-icon" title="Settings">
-            <FiSettings />
           </button>
           <button onClick={onLogout} className="btn-logout" title="Logout">
             <FiLogOut style={{ marginRight: '5px' }} /> Logout
@@ -187,10 +184,6 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
         backgroundColor: 'var(--card-bg)'
       }}>
         <div className="user-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <div className="auth-status">
-            <span className="status-dot"></span>
-            <span>{localStorage.getItem('userEmail') || 'Logged in'}</span>
-          </div>
           <div className="theme-switch-wrapper">
             <label className="theme-switch">
               <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />

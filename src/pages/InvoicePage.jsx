@@ -158,10 +158,6 @@ IFSC Code:`,
           {selectedCompany?.name || companyName}
         </div>
         <div className="user-actions">
-          <div className="auth-status">
-            <span className="status-dot"></span>
-            <span>{localStorage.getItem('userEmail') || 'Logged in'}</span>
-          </div>
           <button 
             onClick={toggleDarkMode} 
             className="btn btn-secondary"
