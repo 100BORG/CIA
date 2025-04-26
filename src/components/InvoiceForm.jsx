@@ -51,6 +51,7 @@ const InvoiceForm = ({
     let subtotalINR = 0;
     
     items.forEach(item => {
+      // Add main item amounts
       subtotalUSD += parseFloat(item.amountUSD) || 0;
       // Recalculate INR amounts based on new exchange rate
       if (item.amountUSD) {
@@ -58,6 +59,18 @@ const InvoiceForm = ({
         item.amountINR = newAmountINR.toFixed(2);
       }
       subtotalINR += parseFloat(item.amountINR) || 0;
+      
+      // Add nested row amounts
+      if (item.nestedRows) {
+        item.nestedRows.forEach(nestedRow => {
+          subtotalUSD += parseFloat(nestedRow.amountUSD) || 0;
+          if (nestedRow.amountUSD) {
+            const newAmountINR = parseFloat(nestedRow.amountUSD) * rate;
+            nestedRow.amountINR = newAmountINR.toFixed(2);
+          }
+          subtotalINR += parseFloat(nestedRow.amountINR) || 0;
+        });
+      }
     });
     
     // Calculate tax amounts
@@ -93,8 +106,17 @@ const InvoiceForm = ({
     let subtotalINR = 0;
     
     invoiceData.items.forEach(item => {
+      // Add main item amounts
       subtotalUSD += parseFloat(item.amountUSD) || 0;
       subtotalINR += parseFloat(item.amountINR) || 0;
+      
+      // Add nested row amounts
+      if (item.nestedRows) {
+        item.nestedRows.forEach(nestedRow => {
+          subtotalUSD += parseFloat(nestedRow.amountUSD) || 0;
+          subtotalINR += parseFloat(nestedRow.amountINR) || 0;
+        });
+      }
     });
     
     // Calculate tax amounts

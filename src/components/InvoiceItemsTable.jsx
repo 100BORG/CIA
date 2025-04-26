@@ -38,14 +38,28 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
     if (!updatedItems[index].nestedRows) {
       updatedItems[index].nestedRows = [];
     }
-    updatedItems[index].nestedRows.push('');
+    updatedItems[index].nestedRows.push({
+      description: '',
+      amountUSD: 0,
+      amountINR: 0
+    });
     setItems(updatedItems);
   };
 
   // Update nested row text
-  const updateNestedRow = (itemIndex, rowIndex, text) => {
+  const updateNestedRow = (itemIndex, rowIndex, field, value) => {
     const updatedItems = [...items];
-    updatedItems[itemIndex].nestedRows[rowIndex] = text;
+    if (field === 'description') {
+      updatedItems[itemIndex].nestedRows[rowIndex].description = value;
+    } else if (field === 'amountUSD') {
+      const numericValue = parseFloat(value) || 0;
+      updatedItems[itemIndex].nestedRows[rowIndex].amountUSD = numericValue;
+      updatedItems[itemIndex].nestedRows[rowIndex].amountINR = numericValue * exchangeRate;
+    } else if (field === 'amountINR') {
+      const numericValue = parseFloat(value) || 0;
+      updatedItems[itemIndex].nestedRows[rowIndex].amountINR = numericValue;
+      updatedItems[itemIndex].nestedRows[rowIndex].amountUSD = numericValue / exchangeRate;
+    }
     setItems(updatedItems);
   };
 
@@ -125,6 +139,44 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
     }
   };
 
+  // Get the display value for a nested row amount field
+  const getNestedAmountDisplayValue = (itemIndex, rowIndex, field) => {
+    const key = `${itemIndex}-${rowIndex}-${field}`;
+    if (key in inputValues) {
+      return inputValues[key];
+    } else {
+      return items[itemIndex].nestedRows[rowIndex][field].toFixed(2);
+    }
+  };
+
+  // Handle focus on nested row amount input fields
+  const handleNestedAmountFocus = (itemIndex, rowIndex, field) => {
+    const key = `${itemIndex}-${rowIndex}-${field}`;
+    setInputValues({
+      ...inputValues,
+      [key]: items[itemIndex].nestedRows[rowIndex][field].toString()
+    });
+  };
+
+  // Handle blur on nested row amount input fields
+  const handleNestedAmountBlur = (itemIndex, rowIndex, field) => {
+    const key = `${itemIndex}-${rowIndex}-${field}`;
+    const value = inputValues[key] || '0';
+    updateNestedRow(itemIndex, rowIndex, field, value);
+    
+    const newInputValues = { ...inputValues };
+    delete newInputValues[key];
+    setInputValues(newInputValues);
+  };
+
+  // Handle change in nested row amount input fields during typing
+  const handleNestedAmountInputChange = (itemIndex, rowIndex, field, value) => {
+    setInputValues({
+      ...inputValues,
+      [`${itemIndex}-${rowIndex}-${field}`]: value
+    });
+  };
+
   return (
     <div className="invoice-items-table">
       <table>
@@ -199,31 +251,49 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                   </button>
                 </td>
               </tr>
-              
-              {/* Nested description rows */}
-              {item.nestedRows?.map((row, rowIndex) => (
+              {item.nestedRows?.map((nestedRow, rowIndex) => (
                 <tr key={`${index}-${rowIndex}`} className="nested-row">
-                  <td colSpan={2}>
-                    <div style={{ display: 'flex' }}>
-                      <input
-                        type="text"
-                        value={row}
-                        onChange={(e) => updateNestedRow(index, rowIndex, e.target.value)}
-                        placeholder="Additional description"
-                        style={{ flex: 1 }}
-                      />
-                      <button
-                        className="btn-icon"
-                        onClick={() => removeNestedRow(index, rowIndex)}
-                        title="Remove description"
-                        style={{ marginLeft: '5px' }}
-                      >
-                        ❌
-                      </button>
-                    </div>
+                  <td>
+                    <textarea
+                      className="item-description"
+                      value={nestedRow.description}
+                      onChange={(e) => updateNestedRow(index, rowIndex, 'description', e.target.value)}
+                      placeholder="Additional description"
+                    ></textarea>
                   </td>
-                  <td></td>
-                  <td></td>
+                  <td>
+                    <input
+                      type="text"
+                      className="item-total-usd"
+                      value={getNestedAmountDisplayValue(index, rowIndex, 'amountUSD')}
+                      onChange={(e) => handleNestedAmountInputChange(index, rowIndex, 'amountUSD', e.target.value)}
+                      onFocus={() => handleNestedAmountFocus(index, rowIndex, 'amountUSD')}
+                      onBlur={() => handleNestedAmountBlur(index, rowIndex, 'amountUSD')}
+                      placeholder="Amount (USD)"
+                      disabled={currency === 'INR'}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="text"
+                      className="item-total-inr"
+                      value={getNestedAmountDisplayValue(index, rowIndex, 'amountINR')}
+                      onChange={(e) => handleNestedAmountInputChange(index, rowIndex, 'amountINR', e.target.value)}
+                      onFocus={() => handleNestedAmountFocus(index, rowIndex, 'amountINR')}
+                      onBlur={() => handleNestedAmountBlur(index, rowIndex, 'amountINR')}
+                      placeholder="Amount (INR)"
+                      disabled={currency === 'USD'}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      className="btn-icon"
+                      onClick={() => removeNestedRow(index, rowIndex)}
+                      title="Remove description"
+                    >
+                      ❌
+                    </button>
+                  </td>
                 </tr>
               ))}
             </React.Fragment>
