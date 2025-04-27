@@ -385,7 +385,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                           borderRadius: '4px',
                           margin: '2px 0',
                           display: 'flex',
-                          justifyContent: 'space-between'
+                          justifyContent: 'space-between',
+                          color: 'var(--text-color)'
                         }}
                       >
                         <span>{field === 'date' ? 'Date' : 
@@ -408,7 +409,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                         cursor: 'pointer',
                         backgroundColor: sortDirection === 'asc' ? 'var(--primary-color-light)' : 'transparent',
                         borderRadius: '4px',
-                        margin: '2px 0'
+                        margin: '2px 0',
+                        color: 'var(--text-color)'
                       }}
                     >
                       Ascending (A-Z, 0-9)
@@ -421,7 +423,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                         cursor: 'pointer',
                         backgroundColor: sortDirection === 'desc' ? 'var(--primary-color-light)' : 'transparent',
                         borderRadius: '4px',
-                        margin: '2px 0'
+                        margin: '2px 0',
+                        color: 'var(--text-color)'
                       }}
                     >
                       Descending (Z-A, 9-0)
