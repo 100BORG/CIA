@@ -1242,226 +1242,268 @@ body, .card, .dashboard-sidebar, .dashboard-topbar, input, select, textarea, but
   transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* Invoice Form Styles */
-.invoice-form {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+/* A4 Invoice Layout Styles */
+.a4-preview-container {
+  width: 210mm; /* A4 width */
+  min-height: 297mm; /* A4 height */
+  padding: 20mm; /* Standard margin */
+  background-color: #fff;
+  margin: 0 auto;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  font-family: 'Arial', sans-serif;
+  box-sizing: border-box;
+  color: #333;
+}
+
+/* 1. Top Header with Logo and Invoice Title */
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.company-info {
+  display: flex;
+  align-items: center;
   gap: 20px;
-  padding: 20px;
-  background-color: var(--bg-color);
 }
 
-.invoice-form .card {
-  background-color: var(--card-bg);
-  border-radius: 10px;
-  box-shadow: var(--card-shadow);
-  padding: 25px;
-  margin-bottom: 0;
+.preview-logo {
+  max-width: 120px;
+  height: auto;
+  object-fit: contain;
 }
 
-.invoice-form .card-title {
-  color: var(--primary-color);
-  font-size: 18px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.invoice-form .form-group {
-  margin-bottom: 20px;
-}
-
-.invoice-form label {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--text-color);
-  font-weight: 500;
-}
-
-.invoice-form input,
-.invoice-form textarea,
-.invoice-form select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  transition: all var(--transition-speed);
-}
-
-.invoice-form input:focus,
-.invoice-form textarea:focus,
-.invoice-form select:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-  outline: none;
-}
-
-.invoice-form textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.invoice-items-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-.invoice-items-table th {
-  background-color: var(--card-bg);
-  color: var(--text-color);
-  font-weight: 600;
-  text-align: left;
-  padding: 12px;
-  border-bottom: 2px solid var(--border-color);
-}
-
-.invoice-items-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-color);
-}
-
-.invoice-items-table input,
-.invoice-items-table textarea {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background-color: var(--card-bg);
-  color: var(--text-color);
-}
-
-.invoice-items-table .item-description {
-  min-height: 60px;
-}
-
-.invoice-items-table .nested-row td {
-  padding-left: 20px;
-  font-size: 0.9em;
-  color: var(--text-color);
-  border-bottom: 1px dashed var(--border-color);
-}
-
-.invoice-totals {
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
-}
-
-.invoice-totals table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.invoice-totals td {
-  padding: 8px;
-  color: var(--text-color);
-}
-
-.invoice-totals tr:last-child td {
+.company-name-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #333;
   font-weight: bold;
-  color: var(--primary-color);
 }
 
-.invoice-actions {
+.invoice-title h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: bold;
+  color: #3b82f6; /* Primary color */
+  text-transform: uppercase;
+}
+
+/* 2. Company and Invoice Details Section */
+.details-section {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 20px;
-  border-top: 1px solid var(--border-color);
+  justify-content: space-between;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
 }
 
-.invoice-actions button {
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all var(--transition-speed);
-  font-weight: 500;
-}
-
-.invoice-actions .btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-}
-
-.invoice-actions .btn-primary:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-1px);
-}
-
-.invoice-actions .btn-secondary {
-  background-color: var(--secondary-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-}
-
-.invoice-actions .btn-secondary:hover {
-  background-color: var(--border-color);
-  transform: translateY(-1px);
-}
-
-/* Sort button styles */
-.btn-sort {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 8px 12px;
+.company-details p {
+  margin: 5px 0;
   font-size: 14px;
-  cursor: pointer;
-  color: var(--text-color);
-  transition: all var(--transition-speed);
 }
 
-.btn-sort:hover {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+.invoice-details {
+  text-align: right;
 }
 
-.sort-options {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  margin-top: 5px;
-  background-color: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
-  z-index: 100;
-  min-width: 200px;
+.invoice-details p {
+  margin: 5px 0;
+  font-size: 14px;
 }
 
-.sort-option {
-  padding: 8px 12px;
-  cursor: pointer;
-  color: var(--text-color);
-  transition: all var(--transition-speed);
+/* 3. Client Information Section */
+.bill-to-section {
+  margin-bottom: 30px;
 }
 
-.sort-option:hover {
-  background-color: var(--secondary-color);
+.bill-to-section h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 16px;
+  color: #3b82f6; /* Primary color */
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
 }
 
-.sort-option.active {
-  background-color: var(--primary-color);
-  color: white;
+.customer-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
-.sort-direction-group {
-  padding: 10px;
-  border-top: 1px solid var(--border-color);
-}
-
-.sort-direction-group > div:first-child {
-  font-weight: bold;
+.info-row {
   margin-bottom: 5px;
-  color: var(--text-color);
+}
+
+.info-row.full-width {
+  width: 100%;
+}
+
+.info-row.half-width {
+  width: calc(50% - 10px);
+}
+
+.info-row p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 4. Invoice Rate Information */
+.invoice-summary {
+  margin-bottom: 25px;
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-radius: 5px;
+}
+
+.rate-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+/* 5. Service Items Table */
+.service-table {
+  margin-bottom: 25px;
+}
+
+.service-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.service-table th {
+  padding: 12px 8px;
+  background-color: #f9f9f9;
+  color: #333;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid #eee;
+}
+
+.service-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.service-table strong {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.service-table p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.service-table p.indented {
+  padding-left: 15px;
+  font-style: italic;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.nested-row td {
+  border-bottom: 1px dashed #eee;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* 6. Totals Section */
+.totals-section {
+  margin-bottom: 25px;
+  width: 50%;
+  margin-left: auto;
+}
+
+.totals-section table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.totals-section td {
+  padding: 8px;
+  text-align: left;
+}
+
+.totals-section td:last-child {
+  text-align: right;
+}
+
+.totals-section .grand-total {
+  font-weight: bold;
+  font-size: 16px;
+  color: #3b82f6; /* Primary color */
+  border-top: 2px solid #eee;
+}
+
+/* 7. Beneficiary Bank Details */
+.bank-details {
+  margin-bottom: 35px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 5px;
+}
+
+.bank-details h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 16px;
+  color: #3b82f6; /* Primary color */
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.account-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* 8. Footer Section */
+.invoice-footer {
+  position: absolute;
+  bottom: 20mm;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  padding: 15px 20mm;
+  color: #888;
+  font-size: 14px;
+  border-top: 1px solid #eee;
+}
+
+.invoice-footer p {
+  margin: 0;
+}
+
+/* Print Styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  .a4-preview-container,
+  .a4-preview-container * {
+    visibility: visible;
+  }
+  
+  .a4-preview-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 20mm;
+    box-shadow: none;
+    page-break-after: always;
+  }
 }

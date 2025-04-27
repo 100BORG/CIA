@@ -87,10 +87,19 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
   };
   
   const handleDeleteCompany = (id) => {
-    if (window.confirm('Are you sure you want to delete this company?')) {
+    if (window.confirm('Are you sure you want to delete this company? All invoices associated with this company will also be deleted.')) {
+      // Update the companies list
       const updatedCompanies = companies.filter(company => company.id !== id);
       setCompanies(updatedCompanies);
       localStorage.setItem('userCompanies', JSON.stringify(updatedCompanies));
+      
+      // Delete all invoices associated with this company
+      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+      const filteredInvoices = savedInvoices.filter(invoice => invoice.companyId !== id);
+      localStorage.setItem('savedInvoices', JSON.stringify(filteredInvoices));
+      
+      // Dispatch event to notify other components about the invoice changes
+      window.dispatchEvent(new Event('invoicesUpdated'));
       
       // If the deleted company was selected in localStorage, clear it
       const selectedCompany = localStorage.getItem('selectedCompany');
