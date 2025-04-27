@@ -243,28 +243,30 @@ IFSC Code:`,
 
   return (
     <div className="container">
-      <header className="header">
-        <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
-          <img 
-            src={selectedCompany?.logo || defaultLogo} 
-            alt={selectedCompany?.name || companyName}
-            style={{ maxHeight: '40px' }}
-          />
-          {selectedCompany?.name || companyName}
-        </div>
-        <div className="user-actions">
-          <button 
-            onClick={toggleDarkMode} 
-            className="btn btn-secondary"
-            title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            style={{ padding: '8px 15px' }}
-          >
-            {darkMode ? '☀️' : '🌙'}
-          </button>
-          <button onClick={() => navigate('/profile')} className="btn btn-secondary">Profile</button>
-          <button onClick={onLogout} className="btn">Logout</button>
-        </div>
-      </header>
+      {!showPreview && (
+        <header className="header">
+          <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
+            <img 
+              src={selectedCompany?.logo || defaultLogo} 
+              alt={selectedCompany?.name || companyName}
+              style={{ maxHeight: '40px' }}
+            />
+            {selectedCompany?.name || companyName}
+          </div>
+          <div className="user-actions">
+            <button 
+              onClick={toggleDarkMode} 
+              className="btn btn-secondary"
+              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              style={{ padding: '8px 15px' }}
+            >
+              {darkMode ? '☀️' : '🌙'}
+            </button>
+            <button onClick={() => navigate('/profile')} className="btn btn-secondary">Profile</button>
+            <button onClick={onLogout} className="btn">Logout</button>
+          </div>
+        </header>
+      )}
       
       {showPreview ? (
         <InvoicePreview 
