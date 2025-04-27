@@ -17,7 +17,8 @@ const InvoiceForm = ({
   onSave,
   onDelete,
   isLoading,
-  setIsLoading
+  setIsLoading,
+  id
 }) => {
   // Initialize state and hooks
   const [exchangeRate, setExchangeRate] = useState(82);
@@ -353,48 +354,58 @@ const InvoiceForm = ({
       // First ensure we're in preview mode
       onPreview();
       
-      // Wait for the preview element to be ready
+      // Wait for the preview element to be ready with enough time for it to render
       setTimeout(async () => {
         try {
+          // Get the preview element
           const previewElement = document.getElementById('invoicePreviewContent');
           
           if (!previewElement) {
             throw new Error('Preview element not found');
           }
           
+          // Use html2canvas to capture the invoice as an image
           const canvas = await html2canvas(previewElement, {
             scale: 2,
             useCORS: true,
             scrollY: 0,
             windowWidth: 794, // A4 width in px (about)
             windowHeight: 1123, // A4 height in px (about)
-            logging: false,
+            logging: true, // Enable logging for debugging
             allowTaint: true,
             backgroundColor: '#ffffff'
           });
           
+          // Convert canvas to image data
           const imgData = canvas.toDataURL('image/jpeg', 1.0);
+          
+          // Create new PDF document
           const pdf = new jsPDF({
             orientation: 'portrait',
             unit: 'mm',
             format: 'a4'
           });
           
+          // Get PDF dimensions
           const pdfWidth = pdf.internal.pageSize.getWidth();
           const pdfHeight = pdf.internal.pageSize.getHeight();
           const ratio = canvas.width / canvas.height;
           const imgWidth = pdfWidth;
           const imgHeight = imgWidth / ratio;
           
+          // Add the image to the PDF
           pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+          
+          // Save the PDF with the invoice number in the filename
           pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
           
           setIsLoading(false);
           setNotification('PDF downloaded successfully!', 'success');
         } catch (error) {
+          console.error('Failed to generate PDF:', error);
           throw new Error(`Failed to generate PDF: ${error.message}`);
         }
-      }, 1000);
+      }, 1500); // Increased timeout to ensure the preview is rendered
     } catch (error) {
       console.error('Error generating PDF:', error);
       setIsLoading(false);
@@ -830,6 +841,16 @@ const InvoiceForm = ({
           </svg>
           Save Invoice
         </button>
+        
+        {invoiceData.invoiceNumber && id && id !== 'new' && (
+          <button onClick={onDelete} className="btn btn-danger">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
+              <path fillRule="evenodd" d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+              <path fillRule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+            Delete Invoice
+          </button>
+        )}
       </div>
       
       {/* Custom Modals */}

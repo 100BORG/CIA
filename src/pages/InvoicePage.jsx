@@ -283,6 +283,7 @@ IFSC Code:`,
           onDelete={deleteInvoice}
           isLoading={isLoading}
           setIsLoading={setIsLoading}
+          id={id}
         />
       )}
       
