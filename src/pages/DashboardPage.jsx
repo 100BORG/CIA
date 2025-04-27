@@ -235,7 +235,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             onClick={handleShowAllInvoices}
           >
             <FiUser className="company-icon" />
-            <span className="company-name">Show All Invoices</span>
+            <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>Show All Invoices</span>
           </div>
           
           <div className="section-title" style={{ padding: '10px', fontSize: '12px', color: 'var(--light-text)', fontWeight: 'bold' }}>
@@ -249,7 +249,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
               onClick={() => handleCompanySelect(company)}
             >
               <img src={company.logo} alt={company.name} className="company-icon" />
-              <span className="company-name">{company.name}</span>
+              <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>{company.name}</span>
             </div>
           ))}
           
@@ -259,7 +259,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             onClick={() => navigate('/company')}
           >
             <FiPlus className="company-icon" />
-            <span className="company-name">Add New Company</span>
+            <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>Add New Company</span>
           </div>
         </div>
         
