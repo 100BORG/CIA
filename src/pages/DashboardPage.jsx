@@ -235,7 +235,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             onClick={handleShowAllInvoices}
           >
             <FiUser className="company-icon" />
-            <span className="company-name">Show All Invoices</span>
+            <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>Show All Invoices</span>
           </div>
           
           <div className="section-title" style={{ padding: '10px', fontSize: '12px', color: 'var(--light-text)', fontWeight: 'bold' }}>
@@ -249,7 +249,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
               onClick={() => handleCompanySelect(company)}
             >
               <img src={company.logo} alt={company.name} className="company-icon" />
-              <span className="company-name">{company.name}</span>
+              <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>{company.name}</span>
             </div>
           ))}
           
@@ -259,7 +259,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             onClick={() => navigate('/company')}
           >
             <FiPlus className="company-icon" />
-            <span className="company-name">Add New Company</span>
+            <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>Add New Company</span>
           </div>
         </div>
         
@@ -273,7 +273,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       {/* Top navigation bar */}
       <div className="dashboard-topbar" style={{
         gridArea: 'topbar',
-        padding: '15px 25px',
+        padding: '18px 25px',
         display: 'flex',
         justifyContent: 'flex-end',
         alignItems: 'center',
@@ -385,7 +385,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                           borderRadius: '4px',
                           margin: '2px 0',
                           display: 'flex',
-                          justifyContent: 'space-between'
+                          justifyContent: 'space-between',
+                          color: 'var(--text-color)'
                         }}
                       >
                         <span>{field === 'date' ? 'Date' : 
@@ -408,7 +409,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                         cursor: 'pointer',
                         backgroundColor: sortDirection === 'asc' ? 'var(--primary-color-light)' : 'transparent',
                         borderRadius: '4px',
-                        margin: '2px 0'
+                        margin: '2px 0',
+                        color: 'var(--text-color)'
                       }}
                     >
                       Ascending (A-Z, 0-9)
@@ -421,7 +423,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                         cursor: 'pointer',
                         backgroundColor: sortDirection === 'desc' ? 'var(--primary-color-light)' : 'transparent',
                         borderRadius: '4px',
-                        margin: '2px 0'
+                        margin: '2px 0',
+                        color: 'var(--text-color)'
                       }}
                     >
                       Descending (Z-A, 9-0)
