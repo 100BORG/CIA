@@ -349,7 +349,8 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                   borderRadius: '4px',
                   padding: '8px 12px',
                   fontSize: '14px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  color: 'var(--text-color)'
                 }}
               >
                 {getSortLabel()} <FiChevronDown />
