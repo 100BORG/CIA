@@ -273,7 +273,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       {/* Top navigation bar */}
       <div className="dashboard-topbar" style={{
         gridArea: 'topbar',
-        padding: '15px 25px',
+        padding: '18px 25px',
         display: 'flex',
         justifyContent: 'flex-end',
         alignItems: 'center',
