@@ -42,7 +42,7 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
       }
     ];
   });
-  
+
   const [activeCompanyId, setActiveCompanyId] = useState(null);
   const [newCompany, setNewCompany] = useState({
     name: '',
@@ -112,25 +112,21 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
     }
   };
   
-  const handleLogoChange = (e) => {
-    // In a real app, this would handle file uploads.
-    // For this demo, we'll just alternate between some sample logos
-    const logos = [
-      './images/default-logo.png',
-      './images/c-logo.png',
-      './images/favicon.png',
-      defaultLogo
-    ];
-    
-    const currentIndex = logos.indexOf(newCompany.logo);
-    const nextIndex = (currentIndex + 1) % logos.length;
-    
-    setNewCompany({
-      ...newCompany,
-      logo: logos[nextIndex]
-    });
+  // New function to handle file uploads
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setNewCompany({
+          ...newCompany,
+          logo: event.target.result
+        });
+      };
+      reader.readAsDataURL(file);
+    }
   };
-  
+
   const handleAddCompany = () => {
     setIsAddingCompany(true);
     setActiveCompanyId(null);
@@ -252,10 +248,21 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
           
           <div className="logo-upload-section">
             <img src={newCompany.logo} alt="Company Logo" className="company-logo-preview" />
-            <button type="button" className="btn-upload" onClick={handleLogoChange}>
-              <FiUpload /> Change Logo
-            </button>
-            <small>(For demo: clicking cycles through sample logos)</small>
+            <div className="logo-upload-actions">
+              <div className="file-upload-container">
+                <label htmlFor="logoUpload" className="btn-upload">
+                  <FiUpload /> Upload Custom Logo
+                </label>
+                <input 
+                  type="file" 
+                  id="logoUpload" 
+                  accept="image/*" 
+                  style={{ display: 'none' }} 
+                  onChange={handleFileUpload} 
+                />
+              </div>
+            </div>
+            <small>(Upload your company logo)</small>
           </div>
           
           <div className="form-group">
