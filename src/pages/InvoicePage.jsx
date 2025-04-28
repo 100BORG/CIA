@@ -210,6 +210,13 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setInvoiceData({ ...invoiceData, [name]: value });
+    
+    // Update the header when senderName is changed
+    if (name === 'senderName' && selectedCompany) {
+      // Create a temporary company object with updated name for header display
+      const updatedCompany = { ...selectedCompany, name: value };
+      setSelectedCompany(updatedCompany);
+    }
   };
 
   const handlePreview = () => {
