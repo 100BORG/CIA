@@ -8,23 +8,9 @@ import { defaultLogo } from '../assets/logoData';
 const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const navigate = useNavigate();
   
-  // Get companies from localStorage or use sample data if none exist
-  const sampleCompanies = [
-    { id: 1000, name: 'Acme Corporation', logo: './images/favicon.png' },
-    { id: 1001, name: 'Globex Industries', logo: './images/c-logo.png' },
-    { id: 1002, name: 'Initech LLC', logo: './images/favicon.png' },
-    { id: 1003, name: 'Umbrella Corp', logo: './images/favicon.png' },
-    { id: 1004, name: 'Stark Industries', logo: './images/favicon.png'}
-  ];
-
   const [companies, setCompanies] = useState(() => {
     const savedCompanies = localStorage.getItem('userCompanies');
-    if (savedCompanies) {
-      // Combine user's companies with sample ones
-      return [...JSON.parse(savedCompanies), ...sampleCompanies];
-    }
-    // Just return sample companies if none exist in localStorage
-    return sampleCompanies;
+    return savedCompanies ? JSON.parse(savedCompanies) : [];
   });
   
   // State for selected company and dashboard view
@@ -71,9 +57,9 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     const handleStorageChange = () => {
       const savedCompanies = localStorage.getItem('userCompanies');
       if (savedCompanies) {
-        setCompanies([...JSON.parse(savedCompanies), ...sampleCompanies]);
+        setCompanies([...JSON.parse(savedCompanies)]);
       } else {
-        setCompanies(sampleCompanies);
+        setCompanies([]);
       }
 
       // Also refresh the saved invoices
@@ -103,9 +89,9 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     // Check for updates to companies when the component mounts
     const savedCompanies = localStorage.getItem('userCompanies');
     if (savedCompanies) {
-      setCompanies([...JSON.parse(savedCompanies), ...sampleCompanies]);
+      setCompanies([...JSON.parse(savedCompanies)]);
     } else {
-      setCompanies(sampleCompanies);
+      setCompanies([]);
     }
 
     // Also refresh saved invoices
