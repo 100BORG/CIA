@@ -32,10 +32,7 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     recipientPhone: '',
     recipientGSTIN: '',
     recipientPAN: '',
-    notes: `Account Name:
-Bank Name:
-Account Number:
-IFSC Code:`,
+    notes: '',
     items: [
       {
         name: '',
@@ -191,10 +188,7 @@ IFSC Code:`,
         recipientPhone: '',
         recipientGSTIN: '',
         recipientPAN: '',
-        notes: `Account Name:
-Bank Name:
-Account Number:
-IFSC Code:`,
+        notes: '',
         items: [
           {
             name: '',
