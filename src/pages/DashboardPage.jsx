@@ -97,6 +97,22 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     // Also refresh saved invoices
     const invoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
     setSavedInvoices(invoices);
+    
+    // Add a focus event listener to refresh data when returning to this tab/window
+    const handleFocus = () => {
+      const refreshedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+      setSavedInvoices(refreshedInvoices);
+      
+      const refreshedCompanies = JSON.parse(localStorage.getItem('userCompanies')) || [];
+      setCompanies(refreshedCompanies);
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    // Clean up event listener
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const handleCompanySelect = (company) => {
@@ -433,15 +449,21 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             sortInvoices(savedInvoices)
               .filter(invoice => {
                 // If a company is selected, only show invoices for that company
-                if (!showAllInvoices && selectedCompany && invoice.companyId !== selectedCompany.id) {
-                  return false;
+                if (!showAllInvoices && selectedCompany) {
+                  // Check if the companyId is missing or doesn't match
+                  if (!invoice.companyId || invoice.companyId !== selectedCompany.id) {
+                    // As a fallback, also check if the company name matches
+                    if (invoice.senderName !== selectedCompany.name) {
+                      return false;
+                    }
+                  }
                 }
                 
                 // Filter by search term if provided
                 if (searchTerm && 
-                    !invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    !invoice.senderName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    !invoice.recipientName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                    !invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    !invoice.senderName?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    !invoice.recipientName?.toLowerCase().includes(searchTerm.toLowerCase())) {
                   return false;
                 }
                 
@@ -461,7 +483,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                 const invoiceStatus = invoice.status || 'Pending';
                 
                 return (
-                  <div key={index} className="invoice-card" onClick={() => navigate(`/invoice/${invoice.invoiceNumber}`)}>
+                  <div key={index} className="invoice-card" onClick={() => navigate(`/invoice/${invoice.id}`)}>
                     <div className="invoice-card-header">
                       <img 
                         src={invoiceCompany.logo} 
@@ -495,7 +517,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                             
                             // Update invoice status in local state
                             const updatedInvoices = savedInvoices.map(inv => 
-                              inv.invoiceNumber === invoice.invoiceNumber 
+                              inv.id === invoice.id 
                                 ? {...inv, status: newStatus} 
                                 : inv
                             );
@@ -534,8 +556,14 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
           {/* Show message if no invoices match the filter */}
           {savedInvoices.length > 0 && 
            sortInvoices(savedInvoices).filter(invoice => {
-              if (!showAllInvoices && selectedCompany && invoice.companyId !== selectedCompany.id) {
-                return false;
+              if (!showAllInvoices && selectedCompany) {
+                // Check if the companyId is missing or doesn't match
+                if (!invoice.companyId || invoice.companyId !== selectedCompany.id) {
+                  // As a fallback, also check if the company name matches
+                  if (invoice.senderName !== selectedCompany.name) {
+                    return false;
+                  }
+                }
               }
               if (searchTerm && 
                   !invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) &&

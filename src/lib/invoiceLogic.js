@@ -6,10 +6,48 @@ import exchangeRateService from '../services/exchangeRateService';
  */
 const invoiceLogic = {
   /**
+   * Generate a unique ID for an invoice
+   * @returns {string} Unique ID
+   */
+  generateUniqueId: () => {
+    return 'inv_' + Math.random().toString(36).substring(2, 15) + 
+           Math.random().toString(36).substring(2, 15);
+  },
+
+  /**
    * Generate a new invoice number 
+   * @param {string} companyName - The company name to use in the invoice number
    * @returns {string} Formatted invoice number
    */
-  generateInvoiceNumber: () => {
+  generateInvoiceNumber: (companyName = 'COMP') => {
+    const date = new Date();
+    const year = date.getFullYear().toString();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const dateStr = `${year}${month}${day}`;
+    
+    // Get company prefix (first 4 letters)
+    const companyPrefix = companyName.trim().substring(0, 4).toUpperCase();
+    
+    // Get last serial from localStorage
+    const lastSerialKey = `invoiceSerial_${dateStr}`;
+    let lastSerial = parseInt(localStorage.getItem(lastSerialKey) || '0');
+    lastSerial += 1;
+    
+    // Save new serial to localStorage
+    localStorage.setItem(lastSerialKey, lastSerial.toString());
+    
+    // Format serial with leading zeros
+    const serialFormatted = String(lastSerial).padStart(4, '0');
+    
+    return `${companyPrefix}-${dateStr}-${serialFormatted}`;
+  },
+  
+  /**
+   * Generate a new invoice number in the legacy format
+   * @returns {string} Formatted legacy invoice number
+   */
+  generateLegacyInvoiceNumber: () => {
     const date = new Date();
     const year = date.getFullYear().toString().substr(-2);
     const month = (date.getMonth() + 1).toString().padStart(2, '0');

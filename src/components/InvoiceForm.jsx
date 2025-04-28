@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import InvoiceItemsTable from './InvoiceItemsTable';
 import emailService from '../services/emailService';
 import pdfService from '../services/pdfService';
 import exchangeRateService from '../services/exchangeRateService';
-import { useNotification } from '../context/ErrorContext';
+import invoiceLogic from '../lib/invoiceLogic';
+import { useNotification } from '../context/NotificationContext';
 import Modal from './Modal';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -29,11 +30,6 @@ const InvoiceForm = ({
   // Fetch exchange rate on component mount
   useEffect(() => {
     fetchExchangeRate();
-    
-    // Generate new invoice number if needed
-    if (!invoiceData.invoiceNumber) {
-      generateInvoiceNumber();
-    }
   }, []);
   
   // Generate invoice number with format COMP-YYYYMMDD-XXXX
@@ -43,6 +39,10 @@ const InvoiceForm = ({
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     const date = `${year}${month}${day}`;
+    
+    // Get company prefix (first 4 letters)
+    const companyName = invoiceData.senderName || 'COMP';
+    const companyPrefix = companyName.trim().substring(0, 4).toUpperCase();
     
     // Get last serial from localStorage
     const lastSerialKey = `invoiceSerial_${date}`;
@@ -54,12 +54,9 @@ const InvoiceForm = ({
     
     // Format serial with leading zeros
     const serialFormatted = String(lastSerial).padStart(4, '0');
-    const invoiceNumber = `COMP-${date}-${serialFormatted}`;
+    const invoiceNumber = `${companyPrefix}-${date}-${serialFormatted}`;
     
-    setInvoiceData(prevData => ({
-      ...prevData,
-      invoiceNumber
-    }));
+    return invoiceNumber;
   };
 
   // Fetch current exchange rate using the exchangeRateService
@@ -78,29 +75,41 @@ const InvoiceForm = ({
   };
   
   const updateCalculationsWithRate = (items, rate) => {
+    // Skip for existing invoices to preserve their values
+    if (id && id !== 'new' && invoiceData.id) {
+      console.log('Skipping exchange rate recalculation for existing invoice:', invoiceData.invoiceNumber);
+      
+      // Just update the exchange rate without recalculating totals
+      setInvoiceData(prevData => ({
+        ...prevData,
+        exchangeRate: rate
+      }));
+      return;
+    }
+    
     // Calculate subtotals with the provided exchange rate
     let subtotalUSD = 0;
     let subtotalINR = 0;
     
     items.forEach(item => {
-      // Add main item amounts
-      subtotalUSD += parseFloat(item.amountUSD) || 0;
-      // Recalculate INR amounts based on new exchange rate
-      if (item.amountUSD) {
-        const newAmountINR = parseFloat(item.amountUSD) * rate;
-        item.amountINR = newAmountINR;
+      // For backward compatibility - if it's an old format item with direct amounts
+      if (item.amountUSD !== undefined) {
+        subtotalUSD += parseFloat(item.amountUSD) || 0;
+        // Recalculate INR amounts based on new exchange rate
+        if (item.amountUSD) {
+          item.amountINR = parseFloat(item.amountUSD) * rate;
+        }
+        subtotalINR += parseFloat(item.amountINR) || 0;
       }
-      subtotalINR += parseFloat(item.amountINR) || 0;
       
-      // Add nested row amounts if they exist
-      if (item.nestedRows && item.nestedRows.length > 0) {
-        item.nestedRows.forEach(nestedRow => {
-          subtotalUSD += parseFloat(nestedRow.amountUSD) || 0;
-          if (nestedRow.amountUSD) {
-            const newAmountINR = parseFloat(nestedRow.amountUSD) * rate;
-            nestedRow.amountINR = newAmountINR;
+      // Add sub-services amounts (standardize on subServices property)
+      if (item.subServices && item.subServices.length > 0) {
+        item.subServices.forEach(subService => {
+          subtotalUSD += parseFloat(subService.amountUSD) || 0;
+          if (subService.amountUSD) {
+            subService.amountINR = parseFloat(subService.amountUSD) * rate;
           }
-          subtotalINR += parseFloat(nestedRow.amountINR) || 0;
+          subtotalINR += parseFloat(subService.amountINR) || 0;
         });
       }
     });
@@ -130,24 +139,38 @@ const InvoiceForm = ({
   
   // Calculate totals whenever items or tax rate changes
   useEffect(() => {
-    updateCalculations();
-  }, [invoiceData.items, invoiceData.taxRate]);
+    // Skip automatic recalculation when loading an existing invoice
+    if (id && id !== 'new' && invoiceData.id) {
+      console.log('Skipping automatic recalculation for existing invoice:', invoiceData.invoiceNumber);
+      return;
+    }
+    
+    updateCalculations(invoiceData.items);
+  }, [invoiceData.items, invoiceData.taxRate, id, invoiceData.id]);
   
-  const updateCalculations = () => {
+  const updateCalculations = (newItems) => {
+    // Skip for existing invoices to preserve their values
+    if (id && id !== 'new' && invoiceData.id) {
+      console.log('Preserving existing calculation values for invoice:', invoiceData.invoiceNumber);
+      return; // Exit early to preserve existing calculations
+    }
+
     // Calculate subtotals
     let subtotalUSD = 0;
     let subtotalINR = 0;
     
-    invoiceData.items.forEach(item => {
-      // Add main item amounts
-      subtotalUSD += parseFloat(item.amountUSD) || 0;
-      subtotalINR += parseFloat(item.amountINR) || 0;
+    newItems.forEach(item => {
+      // For backward compatibility - if it's an old format item with direct amounts
+      if (item.amountUSD !== undefined) {
+        subtotalUSD += parseFloat(item.amountUSD) || 0;
+        subtotalINR += parseFloat(item.amountINR) || 0;
+      }
       
-      // Add nested row amounts if they exist
-      if (item.nestedRows && item.nestedRows.length > 0) {
-        item.nestedRows.forEach(nestedRow => {
-          subtotalUSD += parseFloat(nestedRow.amountUSD) || 0;
-          subtotalINR += parseFloat(nestedRow.amountINR) || 0;
+      // Add sub-services amounts (standardize on subServices property)
+      if (item.subServices && item.subServices.length > 0) {
+        item.subServices.forEach(subService => {
+          subtotalUSD += parseFloat(subService.amountUSD) || 0;
+          subtotalINR += parseFloat(subService.amountINR) || 0;
         });
       }
     });
@@ -279,6 +302,30 @@ const InvoiceForm = ({
     return true;
   };
   
+  const waitForElementToRender = async (elementId, maxAttempts = 10, interval = 300) => {
+    return new Promise((resolve, reject) => {
+      let attempts = 0;
+      
+      const checkElement = () => {
+        attempts++;
+        const element = document.getElementById(elementId);
+        
+        if (element) {
+          // Element found, wait a bit more for it to fully render
+          setTimeout(() => resolve(element), 500);
+        } else if (attempts < maxAttempts) {
+          // Element not found yet, try again
+          setTimeout(checkElement, interval);
+        } else {
+          // Max attempts reached, element not found
+          reject(new Error(`Element with ID ${elementId} not found after ${maxAttempts} attempts`));
+        }
+      };
+      
+      checkElement();
+    });
+  };
+  
   const sendInvoice = async () => {
     // Validate form before sending
     if (!validateForm()) {
@@ -298,42 +345,36 @@ const InvoiceForm = ({
       // First ensure we're in preview mode
       onPreview();
       
-      // Wait for the preview element to be ready
-      setTimeout(async () => {
-        try {
-          const previewElement = document.getElementById('invoicePreviewContent');
-          
-          if (!previewElement) {
-            throw new Error('Preview element not found');
-          }
-          
-          const canvas = await html2canvas(previewElement, {
-            scale: 2,
-            useCORS: true,
-            scrollY: 0,
-          });
-          
-          // Convert to base64 for email attachment
-          const imgData = canvas.toDataURL('image/png');
-          
-          const emailParams = {
-            to_email: invoiceData.recipientEmail,
-            subject: `Invoice - ${invoiceData.invoiceNumber}`,
-            message: `Please find attached the invoice ${invoiceData.invoiceNumber} from ${invoiceData.senderName || 'Your Company'}.`,
-            attachment: imgData
-          };
-          
-          // Use emailService instead of direct emailjs calls
-          await emailService.sendInvoice(emailParams);
-          
-          setIsLoading(false);
-          setNotification('Invoice sent successfully!', 'success');
-        } catch (error) {
-          console.error('Error sending email:', error);
-          setIsLoading(false);
-          setNotification('Failed to send the invoice: ' + error.message, 'error');
-        }
-      }, 1000);
+      try {
+        // Wait for the preview element to be ready
+        const previewElement = await waitForElementToRender('invoicePreviewContent');
+        
+        const canvas = await html2canvas(previewElement, {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+        });
+        
+        // Convert to base64 for email attachment
+        const imgData = canvas.toDataURL('image/png');
+        
+        const emailParams = {
+          to_email: invoiceData.recipientEmail,
+          subject: `Invoice - ${invoiceData.invoiceNumber}`,
+          message: `Please find attached the invoice ${invoiceData.invoiceNumber} from ${invoiceData.senderName || 'Your Company'}.`,
+          attachment: imgData
+        };
+        
+        // Use emailService instead of direct emailjs calls
+        await emailService.sendInvoice(emailParams);
+        
+        setIsLoading(false);
+        setNotification('Invoice sent successfully!', 'success');
+      } catch (error) {
+        console.error('Error sending email:', error);
+        setIsLoading(false);
+        setNotification('Failed to send the invoice: ' + error.message, 'error');
+      }
     } catch (error) {
       console.error('Error preparing preview for email:', error);
       setIsLoading(false);
@@ -354,58 +395,52 @@ const InvoiceForm = ({
       // First ensure we're in preview mode
       onPreview();
       
-      // Wait for the preview element to be ready with enough time for it to render
-      setTimeout(async () => {
-        try {
-          // Get the preview element
-          const previewElement = document.getElementById('invoicePreviewContent');
-          
-          if (!previewElement) {
-            throw new Error('Preview element not found');
-          }
-          
-          // Use html2canvas to capture the invoice as an image
-          const canvas = await html2canvas(previewElement, {
-            scale: 2,
-            useCORS: true,
-            scrollY: 0,
-            windowWidth: 794, // A4 width in px (about)
-            windowHeight: 1123, // A4 height in px (about)
-            logging: true, // Enable logging for debugging
-            allowTaint: true,
-            backgroundColor: '#ffffff'
-          });
-          
-          // Convert canvas to image data
-          const imgData = canvas.toDataURL('image/jpeg', 1.0);
-          
-          // Create new PDF document
-          const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'mm',
-            format: 'a4'
-          });
-          
-          // Get PDF dimensions
-          const pdfWidth = pdf.internal.pageSize.getWidth();
-          const pdfHeight = pdf.internal.pageSize.getHeight();
-          const ratio = canvas.width / canvas.height;
-          const imgWidth = pdfWidth;
-          const imgHeight = imgWidth / ratio;
-          
-          // Add the image to the PDF
-          pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-          
-          // Save the PDF with the invoice number in the filename
-          pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
-          
-          setIsLoading(false);
-          setNotification('PDF downloaded successfully!', 'success');
-        } catch (error) {
-          console.error('Failed to generate PDF:', error);
-          throw new Error(`Failed to generate PDF: ${error.message}`);
-        }
-      }, 1500); // Increased timeout to ensure the preview is rendered
+      try {
+        // Wait for the preview element to be ready
+        const previewElement = await waitForElementToRender('invoicePreviewContent');
+        
+        // Use html2canvas to capture the invoice as an image
+        const canvas = await html2canvas(previewElement, {
+          scale: 2,
+          useCORS: true,
+          scrollY: 0,
+          windowWidth: 794, // A4 width in px (about)
+          windowHeight: 1123, // A4 height in px (about)
+          logging: true, // Enable logging for debugging
+          allowTaint: true,
+          backgroundColor: '#ffffff'
+        });
+        
+        // Convert canvas to image data
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        
+        // Create new PDF document
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+        
+        // Get PDF dimensions
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const ratio = canvas.width / canvas.height;
+        const imgWidth = pdfWidth;
+        const imgHeight = imgWidth / ratio;
+        
+        // Add the image to the PDF
+        pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+        
+        // Save the PDF with the invoice number in the filename
+        pdf.save(`Invoice_${invoiceData.invoiceNumber}.pdf`);
+        
+        setIsLoading(false);
+        setNotification('PDF downloaded successfully!', 'success');
+      } catch (error) {
+        console.error('Failed to generate PDF:', error);
+        setIsLoading(false);
+        setNotification('Failed to generate PDF: ' + error.message, 'error');
+      }
     } catch (error) {
       console.error('Error generating PDF:', error);
       setIsLoading(false);
@@ -489,7 +524,6 @@ const InvoiceForm = ({
               name="invoiceNumber" 
               value={invoiceData.invoiceNumber} 
               onChange={handleInputChange} 
-              readOnly
               required
             />
           </div>
