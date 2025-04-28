@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -12,6 +12,29 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
 
   // Extract exchange rate from the invoiceData or use default
   const exchangeRate = invoiceData.exchangeRate || 82;
+
+  // Add an effect to reduce the PDF container's padding before PDF generation
+  const [pdfMode, setPdfMode] = useState(false);
+  
+  useEffect(() => {
+    const container = document.querySelector('.a4-preview-container');
+    if (container) {
+      if (pdfMode) {
+        // Apply reduced padding for PDF generation (reduced from 10mm to 5mm)
+        container.style.padding = '5mm';
+      } else {
+        // Restore original padding for display
+        container.style.padding = '20mm';
+      }
+    }
+    
+    return () => {
+      // Restore original padding when component unmounts
+      if (container && pdfMode) {
+        container.style.padding = '20mm';
+      }
+    };
+  }, [pdfMode]);
   
   // Generate PDF in single-page compact format
   const downloadSinglePagePDF = async () => {
@@ -19,6 +42,12 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
     setGenerationStatus('Generating single-page PDF...');
     
     try {
+      // Set PDF mode to reduce padding before generating
+      setPdfMode(true);
+      
+      // Give time for the padding change to take effect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const previewElement = document.getElementById('invoicePreviewContent');
       
       if (!previewElement) {
@@ -53,6 +82,8 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
       console.error('Error generating PDF:', error);
       setGenerationStatus('Failed to generate PDF. Please try again.');
     } finally {
+      // Reset to display mode
+      setPdfMode(false);
       setIsGenerating(false);
     }
   };
@@ -63,6 +94,12 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
     setGenerationStatus('Generating multi-page PDF...');
     
     try {
+      // Set PDF mode to reduce padding before generating
+      setPdfMode(true);
+      
+      // Give time for the padding change to take effect
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const previewElement = document.getElementById('invoicePreviewContent');
       
       if (!previewElement) {
@@ -114,6 +151,8 @@ const InvoicePreview = ({ invoiceData, formatDate, onClose }) => {
       console.error('Error generating PDF:', error);
       setGenerationStatus('Failed to generate PDF. Please try again.');
     } finally {
+      // Reset to display mode
+      setPdfMode(false);
       setIsGenerating(false);
     }
   };
