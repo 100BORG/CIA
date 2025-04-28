@@ -213,15 +213,19 @@ table {
   margin-bottom: 15px;
 }
 
-table th, table td {
+table th {
+  background-color: var(--secondary-color);
+  color: var(--text-color);
+  font-weight: bold;
   padding: 12px;
   text-align: left;
   border-bottom: 1px solid var(--border-color);
 }
 
-table th {
-  background-color: var(--light-gray);
-  font-weight: bold;
+table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .item-row td {
