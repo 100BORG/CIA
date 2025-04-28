@@ -24,8 +24,13 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     logoUrl: selectedCompany?.logo || defaultLogo, // Use selected company logo if available
     senderName: selectedCompany?.name || companyName, // Use selected company name if available
     companyId: selectedCompany?.id || null, // Store the company ID for linking invoice to company
-    senderAddress: '',
-    senderGSTIN: '',
+    senderAddress: selectedCompany?.address || '',
+    senderGSTIN: selectedCompany?.gstin || '',
+    // Add bank details from selected company
+    accountName: selectedCompany?.bankDetails?.accountName || '',
+    bankName: selectedCompany?.bankDetails?.bankName || '',
+    accountNumber: selectedCompany?.bankDetails?.accountNumber || '',
+    ifscCode: selectedCompany?.bankDetails?.ifscCode || '',
     recipientName: '',
     recipientEmail: '',
     recipientAddress: '',
@@ -180,8 +185,14 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
         currency: 'USD',
         logoUrl: selectedCompany?.logo || defaultLogo, // Use selected company logo if available
         senderName: selectedCompany?.name || companyName, // Use selected company name if available
-        senderAddress: '',
-        senderGSTIN: '',
+        companyId: selectedCompany?.id || null, // Store the company ID for linking to company
+        senderAddress: selectedCompany?.address || '', // Populate company address
+        senderGSTIN: selectedCompany?.gstin || '', // Populate company GSTIN
+        // Bank details from the company
+        accountName: selectedCompany?.bankDetails?.accountName || '',
+        bankName: selectedCompany?.bankDetails?.bankName || '',
+        accountNumber: selectedCompany?.bankDetails?.accountNumber || '',
+        ifscCode: selectedCompany?.bankDetails?.ifscCode || '',
         recipientName: '',
         recipientEmail: '',
         recipientAddress: '',
