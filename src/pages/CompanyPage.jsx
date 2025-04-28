@@ -151,16 +151,12 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
     }
     
     let updatedCompanies;
-    let invoicesUpdated = false;
     
     if (activeCompanyId !== null) {
       // Edit existing company
       updatedCompanies = companies.map(company => 
         company.id === activeCompanyId ? { ...newCompany, id: activeCompanyId } : company
       );
-      
-      // Update all invoices that use this company
-      invoicesUpdated = updateInvoicesWithCompanyChanges(activeCompanyId, newCompany);
     } else {
       // Add new company
       const newId = Math.max(0, ...companies.map(c => c.id)) + 1;
@@ -172,7 +168,7 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
     setIsAddingCompany(false);
     
     // Show success message
-    setSaveSuccess(invoicesUpdated ? 'updated-invoices' : 'company-only');
+    setSaveSuccess(true);
     setTimeout(() => {
       setSaveSuccess(false);
     }, 3000);
@@ -180,54 +176,6 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
   
   const handleCancelCompanyEdit = () => {
     setIsAddingCompany(false);
-  };
-  
-  // Function to update all invoices associated with a company when company details change
-  const updateInvoicesWithCompanyChanges = (companyId, updatedCompany) => {
-    try {
-      // Get all saved invoices
-      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
-      
-      // Find invoices associated with this company
-      const companyInvoices = savedInvoices.filter(invoice => invoice.companyId === companyId);
-      
-      if (companyInvoices.length === 0) {
-        console.log('No invoices found for this company to update');
-        return; // Early return if no invoices are associated with this company
-      }
-      
-      // Update company details in each invoice
-      const updatedInvoices = savedInvoices.map(invoice => {
-        if (invoice.companyId === companyId) {
-          // Update company-related fields in the invoice
-          return {
-            ...invoice,
-            senderName: updatedCompany.name,
-            senderAddress: updatedCompany.address,
-            senderGSTIN: updatedCompany.gstin,
-            logoUrl: updatedCompany.logo,
-            // Update bank details
-            accountName: updatedCompany.bankDetails.accountName,
-            bankName: updatedCompany.bankDetails.bankName,
-            accountNumber: updatedCompany.bankDetails.accountNumber,
-            ifscCode: updatedCompany.bankDetails.ifscCode
-          };
-        }
-        return invoice; // Return unchanged invoice if not associated with this company
-      });
-      
-      // Save updated invoices back to localStorage
-      localStorage.setItem('savedInvoices', JSON.stringify(updatedInvoices));
-      
-      // Dispatch event to notify other components about the invoice changes
-      window.dispatchEvent(new Event('invoicesUpdated'));
-      
-      console.log(`Updated ${companyInvoices.length} invoice(s) with new company details`);
-      return true; // Indicate that invoices were updated
-    } catch (error) {
-      console.error('Error updating invoices with company changes:', error);
-      return false; // Indicate that there was an error updating invoices
-    }
   };
   
   return (
@@ -290,9 +238,7 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
           
           {saveSuccess && (
             <div className="success-message">
-              {saveSuccess === 'updated-invoices' 
-                ? 'Company information updated successfully! All invoices using this company have also been updated.' 
-                : 'Company information updated successfully!'}
+              Company information updated successfully!
             </div>
           )}
         </div>
