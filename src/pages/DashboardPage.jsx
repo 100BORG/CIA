@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiSettings, FiLogOut, FiUser, FiPlus, FiChevronDown } from 'react-icons/fi';
+import { FiSearch, FiSettings, FiLogOut, FiUser, FiPlus, FiChevronDown, FiUsers } from 'react-icons/fi';
 import { FiSun, FiMoon } from 'react-icons/fi';
 import '../App.css';
 import { defaultLogo } from '../assets/logoData';
@@ -19,7 +19,26 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     return savedCompany ? JSON.parse(savedCompany) : null;
   });
   
+  // State for users
+  const [users, setUsers] = useState(() => {
+    const savedUsers = JSON.parse(localStorage.getItem('users')) || [];
+    // If no users exist yet, create a demo user
+    if (savedUsers.length === 0) {
+      const demoUser = {
+        id: 'demo_user',
+        name: 'Demo User',
+        email: 'user@example.com',
+        role: 'admin',
+        position: 'CEO'
+      };
+      localStorage.setItem('users', JSON.stringify([demoUser]));
+      return [demoUser];
+    }
+    return savedUsers;
+  });
+  
   const [showAllInvoices, setShowAllInvoices] = useState(true);
+  const [selectedAssignee, setSelectedAssignee] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Invoice status state
@@ -39,11 +58,15 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     return invoices;
   });
   
+  // Current user ID
+  const currentUserId = localStorage.getItem('userId') || 'demo_user';
+  
   // Update localStorage when selected company changes
   useEffect(() => {
     if (selectedCompany) {
       localStorage.setItem('selectedCompany', JSON.stringify(selectedCompany));
       setShowAllInvoices(false);
+      setSelectedAssignee(null);
     }
   }, [selectedCompany]);
   
@@ -65,6 +88,10 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       // Also refresh the saved invoices
       const invoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
       setSavedInvoices(invoices);
+      
+      // Refresh users list
+      const updatedUsers = JSON.parse(localStorage.getItem('users')) || [];
+      setUsers(updatedUsers);
     };
     
     // Listen for the custom invoicesUpdated event
@@ -98,6 +125,10 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     const invoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
     setSavedInvoices(invoices);
     
+    // Refresh users list
+    const updatedUsers = JSON.parse(localStorage.getItem('users')) || [];
+    setUsers(updatedUsers);
+    
     // Add a focus event listener to refresh data when returning to this tab/window
     const handleFocus = () => {
       const refreshedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
@@ -105,6 +136,9 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       
       const refreshedCompanies = JSON.parse(localStorage.getItem('userCompanies')) || [];
       setCompanies(refreshedCompanies);
+      
+      const refreshedUsers = JSON.parse(localStorage.getItem('users')) || [];
+      setUsers(refreshedUsers);
     };
     
     window.addEventListener('focus', handleFocus);
@@ -118,10 +152,18 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const handleCompanySelect = (company) => {
     setSelectedCompany(company);
     setShowAllInvoices(false);
+    setSelectedAssignee(null);
   };
   
   const handleShowAllInvoices = () => {
     setShowAllInvoices(true);
+    setSelectedAssignee(null);
+  };
+  
+  const handleAssigneeSelect = (userId) => {
+    setSelectedAssignee(userId);
+    setShowAllInvoices(false);
+    setSelectedCompany(null);
   };
   
   // Sort handlers
@@ -179,6 +221,37 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       
       return newStatuses;
     });
+  };
+  
+  // Function to assign an invoice to a user
+  const assignInvoice = (e, invoiceId, assigneeId) => {
+    e.stopPropagation(); // Prevent navigating to invoice detail page
+    
+    // Update the invoice with the new assignee
+    const updatedInvoices = savedInvoices.map(invoice => {
+      if (invoice.id === invoiceId) {
+        return {
+          ...invoice,
+          assigneeId,
+          assigneeName: users.find(user => user.id === assigneeId)?.name || 'Unassigned'
+        };
+      }
+      return invoice;
+    });
+    
+    // Save updated invoices to localStorage
+    localStorage.setItem('savedInvoices', JSON.stringify(updatedInvoices));
+    setSavedInvoices(updatedInvoices);
+    
+    // Dispatch event to notify other components about the change
+    window.dispatchEvent(new Event('invoicesUpdated'));
+  };
+  
+  // Function to get assignee name from ID
+  const getAssigneeName = (assigneeId) => {
+    if (!assigneeId) return 'Unassigned';
+    const assignee = users.find(user => user.id === assigneeId);
+    return assignee ? assignee.name : 'Unknown User';
   };
   
   // Function to sort invoices
@@ -247,7 +320,7 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
           {companies.map((company) => (
             <div 
               key={company.id}
-              className={`company-item ${selectedCompany?.id === company.id && !showAllInvoices ? 'active' : ''}`}
+              className={`company-item ${selectedCompany?.id === company.id && !showAllInvoices && !selectedAssignee ? 'active' : ''}`}
               onClick={() => handleCompanySelect(company)}
             >
               <img src={company.logo} alt={company.name} className="company-icon" />
@@ -263,6 +336,58 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             <FiPlus className="company-icon" />
             <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>Add New Company</span>
           </div>
+          
+          {/* Users/Assignees Section */}
+          <div className="section-title" style={{ 
+            padding: '10px', 
+            fontSize: '12px', 
+            color: 'var(--light-text)', 
+            fontWeight: 'bold',
+            marginTop: '20px' 
+          }}>
+            ASSIGNEES
+          </div>
+          
+          {users.map((user) => (
+            <div 
+              key={user.id}
+              className={`company-item ${selectedAssignee === user.id ? 'active' : ''}`}
+              onClick={() => handleAssigneeSelect(user.id)}
+            >
+              {user.avatar ? (
+                <img 
+                  src={user.avatar} 
+                  alt={user.name} 
+                  style={{ 
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    marginRight: '10px'
+                  }}
+                />
+              ) : (
+                <div className="avatar-small" style={{ 
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: user.id === currentUserId ? 'var(--primary-color)' : 'var(--secondary-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '12px',
+                  marginRight: '10px'
+                }}>
+                  {user.name[0].toUpperCase()}
+                </div>
+              )}
+              <span className="company-name" style={{ fontSize: '18px', color: 'white' }}>
+                {user.name} {user.id === currentUserId && '(You)'}
+              </span>
+            </div>
+          ))}
         </div>
         
         <div className="sidebar-footer">
@@ -298,19 +423,33 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             gap: '10px',
             cursor: 'pointer'
           }} onClick={() => navigate('/profile')}>
-            <div className="avatar" style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--primary-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--dark-text)',
-              fontWeight: 'bold'
-            }}>
-              {(localStorage.getItem('userEmail') || 'U')[0].toUpperCase()}
-            </div>
+            {localStorage.getItem('userAvatar') ? (
+              <img 
+                src={localStorage.getItem('userAvatar')} 
+                alt="Profile" 
+                className="header-avatar"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  objectFit: 'cover'
+                }}
+              />
+            ) : (
+              <div className="avatar" style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--primary-color)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--dark-text)',
+                fontWeight: 'bold'
+              }}>
+                {(localStorage.getItem('userName') || 'U')[0].toUpperCase()}
+              </div>
+            )}
             <span>My Profile</span>
           </div>
         </div>
@@ -320,11 +459,13 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
       <main className="dashboard-main">
         <header className="dashboard-header">
           <h2>
-            {showAllInvoices 
-              ? 'All Invoices' 
-              : selectedCompany 
-                ? `${selectedCompany.name} Invoices` 
-                : 'Invoices'}
+            {selectedAssignee
+              ? `Invoices Assigned to ${getAssigneeName(selectedAssignee)}`
+              : (showAllInvoices 
+                ? 'All Invoices' 
+                : selectedCompany 
+                  ? `${selectedCompany.name} Invoices` 
+                  : 'Invoices')}
           </h2>
           <div className="dashboard-controls">
             <div className="search-container">
@@ -449,13 +590,20 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             sortInvoices(savedInvoices)
               .filter(invoice => {
                 // If a company is selected, only show invoices for that company
-                if (!showAllInvoices && selectedCompany) {
+                if (!showAllInvoices && selectedCompany && !selectedAssignee) {
                   // Check if the companyId is missing or doesn't match
                   if (!invoice.companyId || invoice.companyId !== selectedCompany.id) {
                     // As a fallback, also check if the company name matches
                     if (invoice.senderName !== selectedCompany.name) {
                       return false;
                     }
+                  }
+                }
+                
+                // If an assignee is selected, only show invoices assigned to them
+                if (selectedAssignee) {
+                  if (invoice.assigneeId !== selectedAssignee) {
+                    return false;
                   }
                 }
                 
@@ -540,6 +688,24 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
                         </span>
                       </div>
                     </div>
+                    <div className="invoice-assignee-row">
+                      <div className="assignee-label">Assigned to:</div>
+                      <div className="assignee-select-container">
+                        <select 
+                          className="assignee-select"
+                          value={invoice.assigneeId || ''}
+                          onChange={(e) => assignInvoice(e, invoice.id, e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map(user => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} {user.id === currentUserId ? '(You)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 );
               })
@@ -556,7 +722,11 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
           {/* Show message if no invoices match the filter */}
           {savedInvoices.length > 0 && 
            sortInvoices(savedInvoices).filter(invoice => {
-              if (!showAllInvoices && selectedCompany) {
+              if (selectedAssignee) {
+                if (invoice.assigneeId !== selectedAssignee) {
+                  return false;
+                }
+              } else if (!showAllInvoices && selectedCompany) {
                 // Check if the companyId is missing or doesn't match
                 if (!invoice.companyId || invoice.companyId !== selectedCompany.id) {
                   // As a fallback, also check if the company name matches
@@ -575,8 +745,14 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             }).length === 0 && (
               <div className="no-invoices-message">
                 <p>No invoices found with the current filter.</p>
-                <button className="btn-clear-filter" onClick={() => setSearchTerm('')}>
-                  Clear Search
+                <button className="btn-clear-filter" onClick={() => {
+                  setSearchTerm('');
+                  if (selectedAssignee) {
+                    setSelectedAssignee(null);
+                    setShowAllInvoices(true);
+                  }
+                }}>
+                  Clear Filters
                 </button>
               </div>
             )

@@ -109,9 +109,13 @@ function App() {
     }
   }, [isAuthenticated, location.pathname, navigate])
 
-  const handleLogin = (email) => {
+  const handleLogin = (email, userId, userName, phone, position) => {
     localStorage.setItem('isLoggedIn', 'true')
     localStorage.setItem('userEmail', email)
+    localStorage.setItem('userId', userId || 'demo_user')
+    localStorage.setItem('userName', userName || email.split('@')[0])
+    localStorage.setItem('userPhone', phone || '')
+    localStorage.setItem('userPosition', position || '')
     localStorage.setItem('lastLogin', new Date().toString())
     localStorage.setItem('lastActivity', new Date().getTime().toString())
     setIsAuthenticated(true)
