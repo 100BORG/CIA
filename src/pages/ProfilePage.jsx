@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiArrowLeft, FiUpload, FiCamera } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiArrowLeft, FiUpload, FiCamera, FiTrash2 } from 'react-icons/fi';
 import { defaultLogo } from '../assets/logoData';
+import Modal from '../components/Modal';
 import './ProfilePage.css';
 
 const ProfilePage = () => {
+  const navigate = useNavigate();
+  
   // Initialize state with data from localStorage or defaults
   const [formData, setFormData] = useState({
     name: localStorage.getItem('userName') || 'John Doe',
@@ -17,6 +20,8 @@ const ProfilePage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Initialize avatar from user object if available
   useEffect(() => {
@@ -97,6 +102,48 @@ const ProfilePage = () => {
         setSaveSuccess(false);
       }, 3000);
     }, 800);
+  };
+  
+  const handleDeleteAccount = () => {
+    setIsDeleting(true);
+    
+    // Simulate a bit of processing time
+    setTimeout(() => {
+      const userId = localStorage.getItem('userId');
+      
+      // 1. Unassign all invoices assigned to this user
+      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+      const updatedInvoices = savedInvoices.map(invoice => {
+        if (invoice.assigneeId === userId) {
+          return { ...invoice, assigneeId: '' }; // Unassign
+        }
+        return invoice;
+      });
+      localStorage.setItem('savedInvoices', JSON.stringify(updatedInvoices));
+      
+      // 2. Remove user from users array
+      const users = JSON.parse(localStorage.getItem('users')) || [];
+      const filteredUsers = users.filter(user => user.id !== userId);
+      localStorage.setItem('users', JSON.stringify(filteredUsers));
+      
+      // 3. Clear all user data from localStorage
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('userEmail');
+      localStorage.removeItem('userId');
+      localStorage.removeItem('userName');
+      localStorage.removeItem('userPhone');
+      localStorage.removeItem('userPosition');
+      localStorage.removeItem('userAvatar');
+      localStorage.removeItem('lastLogin');
+      localStorage.removeItem('lastActivity');
+      localStorage.removeItem('selectedCompany');
+      
+      // 4. Dispatch event to notify other components
+      window.dispatchEvent(new Event('invoicesUpdated'));
+      
+      // 5. Navigate to login page
+      navigate('/login');
+    }, 1000);
   };
   
   return (
@@ -195,7 +242,54 @@ const ProfilePage = () => {
             </button>
           </div>
         </form>
+        
+        {/* Danger Zone Section */}
+        <div className="profile-section danger-zone">
+          <h3>Danger Zone</h3>
+          <p>Delete your account permanently. This action cannot be undone.</p>
+          <button 
+            className="btn btn-danger" 
+            onClick={() => setShowDeleteModal(true)}
+            disabled={isDeleting}
+          >
+            <FiTrash2 style={{ marginRight: '8px' }} /> 
+            {isDeleting ? 'Deleting Account...' : 'Delete Account'}
+          </button>
+        </div>
       </div>
+      
+      {/* Delete Account Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Account"
+        actions={
+          <>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => setShowDeleteModal(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-danger" 
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete your account? This will:</p>
+        <ul>
+          <li>Remove all your account information</li>
+          <li>Unassign any invoices assigned to you</li>
+          <li>Log you out immediately</li>
+        </ul>
+        <p style={{ fontWeight: 'bold' }}>This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 };
