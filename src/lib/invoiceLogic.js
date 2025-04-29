@@ -17,9 +17,10 @@ const invoiceLogic = {
   /**
    * Generate a new invoice number 
    * @param {string} companyName - The company name to use in the invoice number
+   * @param {boolean} saveIncrement - Whether to save the incremented value to localStorage
    * @returns {string} Formatted invoice number
    */
-  generateInvoiceNumber: (companyName = 'COMP') => {
+  generateInvoiceNumber: (companyName = 'COMP', saveIncrement = false) => {
     const date = new Date();
     const year = date.getFullYear().toString();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -29,16 +30,48 @@ const invoiceLogic = {
     // Get company prefix (first 4 letters)
     const companyPrefix = companyName.trim().substring(0, 4).toUpperCase();
     
-    // Get last serial from localStorage
-    const lastSerialKey = `invoiceSerial_${dateStr}`;
-    let lastSerial = parseInt(localStorage.getItem(lastSerialKey) || '0');
-    lastSerial += 1;
+    // Get last invoice serial from localStorage using a company-specific key
+    // This ensures sequential numbers regardless of date
+    const companySerialKey = `invoiceSerial_${companyPrefix}`;
     
-    // Save new serial to localStorage
-    localStorage.setItem(lastSerialKey, lastSerial.toString());
+    // Get all existing invoices to find the highest invoice number
+    const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+    
+    // Find the highest serial number for this company prefix
+    let highestSerial = 0;
+    
+    // First check if we have a stored last serial number
+    const storedLastSerial = parseInt(localStorage.getItem(companySerialKey) || '0');
+    highestSerial = storedLastSerial;
+    
+    // Also search through existing invoices to ensure we don't miss any
+    savedInvoices.forEach(invoice => {
+      if (invoice.invoiceNumber && invoice.invoiceNumber.startsWith(companyPrefix)) {
+        // Extract the serial number from the invoice number
+        const parts = invoice.invoiceNumber.split('-');
+        if (parts.length === 3) {
+          const serialPart = parseInt(parts[2]);
+          if (!isNaN(serialPart) && serialPart > highestSerial) {
+            highestSerial = serialPart;
+          }
+        }
+      }
+    });
+    
+    // Calculate next serial number
+    const nextSerial = highestSerial + 1;
+    
+    // Only save the incremented value if saveIncrement is true
+    if (saveIncrement) {
+      // Save the new serial number back to localStorage
+      localStorage.setItem(companySerialKey, nextSerial.toString());
+      console.log(`Saved new invoice number: ${companyPrefix}-${dateStr}-${nextSerial.toString().padStart(4, '0')}`);
+    } else {
+      console.log(`Generated preview invoice number: ${companyPrefix}-${dateStr}-${nextSerial.toString().padStart(4, '0')} (not saved)`);
+    }
     
     // Format serial with leading zeros
-    const serialFormatted = String(lastSerial).padStart(4, '0');
+    const serialFormatted = String(nextSerial).padStart(4, '0');
     
     return `${companyPrefix}-${dateStr}-${serialFormatted}`;
   },

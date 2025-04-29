@@ -77,7 +77,7 @@ const InvoiceForm = ({
   const updateCalculationsWithRate = (items, rate) => {
     // Skip for existing invoices to preserve their values
     if (id && id !== 'new' && invoiceData.id) {
-      console.log('Skipping exchange rate recalculation for existing invoice:', invoiceData.invoiceNumber);
+      console.log('Updating exchange rate for existing invoice without recalculating totals');
       
       // Just update the exchange rate without recalculating totals
       setInvoiceData(prevData => ({
@@ -91,7 +91,10 @@ const InvoiceForm = ({
     let subtotalUSD = 0;
     let subtotalINR = 0;
     
-    items.forEach(item => {
+    // Create a deep copy of items to avoid reference issues
+    const updatedItems = JSON.parse(JSON.stringify(items));
+    
+    updatedItems.forEach(item => {
       // For backward compatibility - if it's an old format item with direct amounts
       if (item.amountUSD !== undefined) {
         subtotalUSD += parseFloat(item.amountUSD) || 0;
@@ -126,7 +129,7 @@ const InvoiceForm = ({
     // Update invoice data
     setInvoiceData(prevData => ({
       ...prevData,
-      items: [...items],
+      items: updatedItems,
       subtotalUSD,
       subtotalINR,
       taxAmountUSD,
@@ -145,15 +148,25 @@ const InvoiceForm = ({
       return;
     }
     
+    // For existing invoices, only update calculations when tax rate changes manually
+    if (id && id !== 'new') {
+      // Only recalculate if tax rate is changed by user
+      if (invoiceData.items.length > 0) {
+        updateCalculations(invoiceData.items);
+      }
+      return;
+    }
+
+    // For new invoices, always recalculate
     updateCalculations(invoiceData.items);
-  }, [invoiceData.items, invoiceData.taxRate, id, invoiceData.id]);
+  // We're removing items from dependency array to prevent constant recalculation
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoiceData.taxRate, id, invoiceData.id]);
   
   const updateCalculations = (newItems) => {
-    // Skip for existing invoices to preserve their values
-    if (id && id !== 'new' && invoiceData.id) {
-      console.log('Preserving existing calculation values for invoice:', invoiceData.invoiceNumber);
-      return; // Exit early to preserve existing calculations
-    }
+    // Don't skip calculation for existing invoices during editing
+    // We need to recalculate when items change
+    console.log('Calculating totals for invoice items:', newItems);
 
     // Calculate subtotals
     let subtotalUSD = 0;
@@ -183,6 +196,10 @@ const InvoiceForm = ({
     // Calculate totals
     const totalUSD = subtotalUSD + taxAmountUSD;
     const totalINR = subtotalINR + taxAmountINR;
+    
+    console.log('Calculated new totals:', {
+      subtotalUSD, subtotalINR, totalUSD, totalINR
+    });
     
     // Update invoice data
     setInvoiceData(prevData => ({
@@ -710,7 +727,12 @@ const InvoiceForm = ({
         
         <InvoiceItemsTable 
           items={invoiceData.items}
-          setItems={(newItems) => setInvoiceData({...invoiceData, items: newItems})}
+          setItems={(newItems) => {
+            // Update the invoice data with new items
+            setInvoiceData({...invoiceData, items: newItems});
+            // Calculate totals when items change
+            updateCalculations(newItems);
+          }}
           exchangeRate={exchangeRate}
           currency={invoiceData.currency}
         />

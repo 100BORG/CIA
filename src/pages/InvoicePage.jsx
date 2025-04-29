@@ -19,7 +19,8 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   
   // Define initial state
   const initialInvoiceData = {
-    invoiceNumber: invoiceLogic.generateInvoiceNumber(selectedCompany?.name),
+    // Pass false to avoid incrementing the counter until we actually save
+    invoiceNumber: invoiceLogic.generateInvoiceNumber(selectedCompany?.name, false),
     invoiceDate: new Date().toISOString().split('T')[0],
     senderName: selectedCompany?.name || companyName,
     senderAddress: selectedCompany?.address || '',
@@ -167,17 +168,21 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
           taxRate: parseFloat(taxRate) || 18
         };
         
-        // Apply the loaded invoice to state
-        setInvoiceData(loadedInvoice);
-        
-        console.log('Loaded invoice with calculations:', {
-          subtotalUSD: loadedInvoice.subtotalUSD,
-          subtotalINR: loadedInvoice.subtotalINR,
-          taxAmountUSD: loadedInvoice.taxAmountUSD,
-          taxAmountINR: loadedInvoice.taxAmountINR,
-          totalUSD: loadedInvoice.totalUSD,
-          totalINR: loadedInvoice.totalINR
-        });
+        // Use setTimeout to ensure state updates happen after the current execution cycle
+        // This helps prevent race conditions when loading service items
+        setTimeout(() => {
+          // Apply the loaded invoice to state
+          setInvoiceData(loadedInvoice);
+          
+          console.log('Loaded invoice with calculations:', {
+            subtotalUSD: loadedInvoice.subtotalUSD,
+            subtotalINR: loadedInvoice.subtotalINR,
+            taxAmountUSD: loadedInvoice.taxAmountUSD,
+            taxAmountINR: loadedInvoice.taxAmountINR,
+            totalUSD: loadedInvoice.totalUSD,
+            totalINR: loadedInvoice.totalINR
+          });
+        }, 0);
         
         return; // Exit early, don't generate a new invoice number
       } else {
@@ -189,7 +194,9 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
         return;
       }
     }
-  }, [id, navigate, selectedCompany, defaultLogo, companyName, initialInvoiceData]);
+  // This effect should only run once when the component mounts, not on every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, navigate]); // Only include id and navigate in the dependency array to prevent re-triggering
 
   // Format date for input field (YYYY-MM-DD)
   const formatDateForInput = (date) => {
@@ -224,8 +231,8 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const saveInvoice = () => {
     // Check if invoice number is empty and needs to be generated
     if (!invoiceData.invoiceNumber.trim()) {
-      // Generate a new invoice number using the company name
-      const newInvoiceNumber = invoiceLogic.generateInvoiceNumber(invoiceData.senderName);
+      // Generate a new invoice number using the company name, but don't save the increment yet
+      const newInvoiceNumber = invoiceLogic.generateInvoiceNumber(invoiceData.senderName, false);
       
       // Set the new invoice number
       setInvoiceData(prevData => ({
@@ -249,6 +256,13 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     try {
       // Get existing invoices from localStorage or initialize empty array
       const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+      
+      // Now that we're actually saving, generate the final invoice number with increment
+      // Only regenerate if we're creating a new invoice (not editing an existing one)
+      let finalInvoiceNumber = invoiceData.invoiceNumber;
+      if (!invoiceData.id) {
+        finalInvoiceNumber = invoiceLogic.generateInvoiceNumber(invoiceData.senderName, true);
+      }
       
       // Process the items to ensure correct structure before saving
       const processedItems = invoiceData.items.map(item => {
@@ -278,6 +292,8 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
       // Check if this invoice already has an ID (existing invoice)
       let invoiceToSave = {
         ...invoiceData,
+        // Use the final invoice number with increment
+        invoiceNumber: finalInvoiceNumber,
         // Ensure processed items are used
         items: processedItems,
         // Ensure calculation values are numbers
@@ -398,6 +414,81 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
       }
     }
   };
+
+  // Update company data when a company is updated from Company Page
+  useEffect(() => {
+    // Handler for when a company is updated
+    const handleCompanyUpdate = (event) => {
+      const { company, action } = event.detail;
+      console.log(`Company ${action === 'edit' ? 'updated' : 'added'}:`, company);
+      
+      // Only update the current invoice if it's associated with this company
+      if (invoiceData.companyId === company.id || 
+          (!invoiceData.companyId && selectedCompany?.id === company.id)) {
+        
+        console.log('Updating current invoice with updated company details');
+        
+        // Update company-related fields in the current invoice
+        setInvoiceData(prevData => ({
+          ...prevData,
+          senderName: company.name,
+          senderAddress: company.address || '',
+          senderGSTIN: company.gstin || '',
+          logoUrl: company.logo || defaultLogo,
+          companyId: company.id,
+          accountName: company.bankDetails?.accountName || '',
+          bankName: company.bankDetails?.bankName || '',
+          accountNumber: company.bankDetails?.accountNumber || '',
+          ifscCode: company.bankDetails?.ifscCode || ''
+        }));
+        
+        // Update the selected company in our component state
+        setSelectedCompany(company);
+      }
+      
+      // Update all saved invoices that use this company
+      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
+      let updatedInvoices = false;
+      
+      const updatedInvoicesList = savedInvoices.map(invoice => {
+        // Check if this invoice is associated with the updated company
+        if (invoice.companyId === company.id) {
+          updatedInvoices = true;
+          
+          // Update company details in the invoice
+          return {
+            ...invoice,
+            senderName: company.name,
+            senderAddress: company.address || '',
+            senderGSTIN: company.gstin || '',
+            logoUrl: company.logo || defaultLogo,
+            accountName: company.bankDetails?.accountName || '',
+            bankName: company.bankDetails?.bankName || '',
+            accountNumber: company.bankDetails?.accountNumber || '',
+            ifscCode: company.bankDetails?.ifscCode || ''
+          };
+        }
+        return invoice;
+      });
+      
+      // Only update localStorage if any invoices were modified
+      if (updatedInvoices) {
+        console.log('Updating saved invoices with new company details');
+        localStorage.setItem('savedInvoices', JSON.stringify(updatedInvoicesList));
+        
+        // Notify other components that invoices have been updated
+        window.dispatchEvent(new Event('invoicesUpdated'));
+      }
+    };
+
+    // Add event listener for company updates
+    window.addEventListener('companyUpdated', handleCompanyUpdate);
+    
+    // Cleanup function to remove event listener
+    return () => {
+      window.removeEventListener('companyUpdated', handleCompanyUpdate);
+    };
+  }, [invoiceData.companyId, selectedCompany, setInvoiceData, defaultLogo]);
 
   return (
     <div className="container">

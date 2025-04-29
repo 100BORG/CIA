@@ -44,10 +44,16 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
       const needsUpdate = JSON.stringify(updatedItems) !== JSON.stringify(items);
       if (needsUpdate) {
         console.log('Updating invoice items structure with processed items');
-        setItems(updatedItems);
+        // Using a setTimeout to avoid potential race conditions with other state updates
+        setTimeout(() => {
+          setItems(updatedItems);
+        }, 0);
       }
     }
-  }, [items, setItems]);
+  // We're adding a unique JSON representation of items as a dependency instead of items itself
+  // This prevents unnecessary re-renders but still catches actual data changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(items), setItems]);
 
   // Add a new empty main service to the list
   const addMainService = () => {
@@ -174,7 +180,9 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
       }
     }
 
-    setItems(updatedItems);
+    // Force a deep copy to ensure React recognizes the change
+    const itemsCopy = JSON.parse(JSON.stringify(updatedItems));
+    setItems(itemsCopy);
   };
 
   // Get the display value for an amount field

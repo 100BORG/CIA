@@ -151,8 +151,9 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
     }
     
     let updatedCompanies;
+    const isEditing = activeCompanyId !== null;
     
-    if (activeCompanyId !== null) {
+    if (isEditing) {
       // Edit existing company
       updatedCompanies = companies.map(company => 
         company.id === activeCompanyId ? { ...newCompany, id: activeCompanyId } : company
@@ -165,6 +166,25 @@ const CompanyPage = ({ darkMode, toggleDarkMode }) => {
     
     setCompanies(updatedCompanies);
     localStorage.setItem('userCompanies', JSON.stringify(updatedCompanies));
+    
+    // Dispatch a custom event with updated company data
+    const updatedCompany = isEditing 
+      ? { ...newCompany, id: activeCompanyId } 
+      : { ...newCompany, id: Math.max(0, ...companies.map(c => c.id)) + 1 };
+    
+    window.dispatchEvent(new CustomEvent('companyUpdated', {
+      detail: { company: updatedCompany, action: isEditing ? 'edit' : 'add' }
+    }));
+    
+    // Update selected company if needed
+    const selectedCompany = localStorage.getItem('selectedCompany');
+    if (selectedCompany) {
+      const parsedCompany = JSON.parse(selectedCompany);
+      if (parsedCompany.id === updatedCompany.id) {
+        localStorage.setItem('selectedCompany', JSON.stringify(updatedCompany));
+      }
+    }
+    
     setIsAddingCompany(false);
     
     // Show success message
