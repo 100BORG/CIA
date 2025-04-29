@@ -61,6 +61,9 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
   // Current user ID
   const currentUserId = localStorage.getItem('userId') || 'demo_user';
   
+  // State for current user's avatar
+  const [userAvatar, setUserAvatar] = useState(localStorage.getItem('userAvatar') || '');
+  
   // Update localStorage when selected company changes
   useEffect(() => {
     if (selectedCompany) {
@@ -295,6 +298,38 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
     });
   };
   
+  // Effect to sync user avatar from users array
+  useEffect(() => {
+    // Find current user in users array to get the latest avatar
+    const loggedInUserId = localStorage.getItem('userId');
+    if (loggedInUserId) {
+      const currentUser = users.find(user => user.id === loggedInUserId);
+      if (currentUser && currentUser.avatar) {
+        // Update local state and localStorage if needed
+        setUserAvatar(currentUser.avatar);
+        if (currentUser.avatar !== localStorage.getItem('userAvatar')) {
+          localStorage.setItem('userAvatar', currentUser.avatar);
+        }
+      }
+    }
+    
+    // Listen for profile updates
+    const handleUserUpdated = () => {
+      const updatedUsers = JSON.parse(localStorage.getItem('users')) || [];
+      const loggedInUserId = localStorage.getItem('userId');
+      const updatedUser = updatedUsers.find(user => user.id === loggedInUserId);
+      if (updatedUser && updatedUser.avatar) {
+        setUserAvatar(updatedUser.avatar);
+      }
+    };
+    
+    window.addEventListener('userUpdated', handleUserUpdated);
+    
+    return () => {
+      window.removeEventListener('userUpdated', handleUserUpdated);
+    };
+  }, [users]);
+  
   return (
     <div className="dashboard-container">
       {/* Sidebar with company list */}
@@ -423,9 +458,9 @@ const DashboardPage = ({ onLogout, darkMode, toggleDarkMode }) => {
             gap: '10px',
             cursor: 'pointer'
           }} onClick={() => navigate('/profile')}>
-            {localStorage.getItem('userAvatar') ? (
+            {userAvatar ? (
               <img 
-                src={localStorage.getItem('userAvatar')} 
+                src={userAvatar} 
                 alt="Profile" 
                 className="header-avatar"
                 style={{
