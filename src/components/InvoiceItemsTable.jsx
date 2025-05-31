@@ -1,7 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../config/supabaseClient';
 
-const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
+const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency, disabled = false }) => {
   const [inputValues, setInputValues] = useState({});
+  const [descriptions, setDescriptions] = useState([]);
+  
+  // Fetch service descriptions from Supabase on mount
+  useEffect(() => {
+    const fetchDescriptions = async () => {
+      let { data, error } = await supabase.from('descriptions').select('*').order('id', { ascending: true });
+      if (!error && data) {
+        setDescriptions(data);
+      }
+    };
+    fetchDescriptions();
+    // Listen for updates to descriptions (in case another tab/page updates)
+    const handleDescriptionsUpdated = () => {
+      fetchDescriptions();
+    };
+    window.addEventListener('descriptionsUpdated', handleDescriptionsUpdated);
+    return () => {
+      window.removeEventListener('descriptionsUpdated', handleDescriptionsUpdated);
+    };
+  }, []);
   
   // Ensure all items have the correct structure and subServices are properly initialized
   useEffect(() => {
@@ -57,6 +78,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Add a new empty main service to the list
   const addMainService = () => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     setItems([
       ...items,
       {
@@ -71,6 +94,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Add a new sub-service to a main service
   const addSubService = (mainIndex) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const updatedItems = [...items];
     // Ensure subServices exists before trying to push to it
     if (!updatedItems[mainIndex].subServices) {
@@ -88,6 +113,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Remove a main service at the specified index
   const removeMainService = (index) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const updatedItems = [...items];
     updatedItems.splice(index, 1);
     setItems(updatedItems);
@@ -95,6 +122,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Remove a sub-service from a main service
   const removeSubService = (mainIndex, subIndex) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const updatedItems = [...items];
     // Ensure subServices exists before trying to splice it
     if (updatedItems[mainIndex].subServices) {
@@ -111,6 +140,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Handle focus on amount input fields
   const handleAmountFocus = (mainIndex, subIndex, field) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const key = `${mainIndex}-${subIndex}-${field}`;
     // Ensure the field exists before trying to access it
     if (items[mainIndex]?.subServices?.[subIndex]?.[field] !== undefined) {
@@ -123,6 +154,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Handle blur on amount input fields
   const handleAmountBlur = (mainIndex, subIndex, field) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const key = `${mainIndex}-${subIndex}-${field}`;
     const value = inputValues[key] || '0';
     handleSubServiceChange(mainIndex, subIndex, field, value);
@@ -134,6 +167,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Handle change in amount input fields during typing
   const handleAmountInputChange = (mainIndex, subIndex, field, value) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     setInputValues({
       ...inputValues,
       [`${mainIndex}-${subIndex}-${field}`]: value
@@ -142,6 +177,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Handle change of main service name
   const handleMainServiceChange = (index, value) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const updatedItems = [...items];
     updatedItems[index].name = value;
     setItems(updatedItems);
@@ -149,6 +186,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
 
   // Handle change of sub-service fields
   const handleSubServiceChange = (mainIndex, subIndex, field, value) => {
+    if (disabled) return; // Don't allow changes if disabled
+    
     const updatedItems = [...items];
     
     // Ensure subServices exists
@@ -213,26 +252,31 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
               {/* Main Service Row */}
               <tr className="main-service-row">
                 <td colSpan="3">
-                  <input
-                    type="text"
-                    className="main-service-name"
-                    value={mainService.name || ''}
-                    onChange={(e) => handleMainServiceChange(mainIndex, e.target.value)}
-                    placeholder="Main Service Name"
-                    style={{ 
-                      fontSize: '1.2rem', 
-                      fontWeight: 'bold',
-                      width: '100%',
-                      border: 'none',
-                      padding: '10px 0'
-                    }}
-                  />
+                  <div style={{ display: 'flex', width: '100%', flexDirection: 'column', gap: '8px' }}>
+                    <input
+                      type="text"
+                      className="main-service-name"
+                      value={mainService.name || ''}
+                      onChange={(e) => handleMainServiceChange(mainIndex, e.target.value)}
+                      placeholder="Main Service Name"
+                      disabled={disabled}
+                      style={{ 
+                        fontSize: '1.2rem', 
+                        fontWeight: 'bold',
+                        width: '100%',
+                        border: 'none',
+                        padding: '10px 0'
+                      }}
+                    />
+                  </div>
                 </td>
                 <td>
                   <button
                     className="btn-icon"
                     onClick={() => removeMainService(mainIndex)}
                     title="Remove main service"
+                    disabled={disabled}
+                    style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
                   >
                     ❌
                   </button>
@@ -250,12 +294,41 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                         value={subService.name || ''}
                         onChange={(e) => handleSubServiceChange(mainIndex, subIndex, 'name', e.target.value)}
                         placeholder="Service name"
+                        disabled={disabled}
                       />
+                      {descriptions.length > 0 && (
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleSubServiceChange(mainIndex, subIndex, 'name', e.target.value);
+                            }
+                          }}
+                          disabled={disabled}
+                          style={{ 
+                            fontSize: '0.9rem',
+                            padding: '6px',
+                            marginTop: '6px',
+                            marginBottom: '6px',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '4px',
+                            backgroundColor: 'var(--card-bg)',
+                            width: '100%'
+                          }}
+                        >
+                          <option value="">Select from the descriptions</option>
+                          {descriptions.map(description => (
+                            <option key={description.id} value={description.text}>
+                              {description.text}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <textarea
                         className="item-description"
                         value={subService.description || ''}
                         onChange={(e) => handleSubServiceChange(mainIndex, subIndex, 'description', e.target.value)}
                         placeholder="Service description"
+                        disabled={disabled}
                       ></textarea>
                     </div>
                   </td>
@@ -268,7 +341,7 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                       onFocus={() => handleAmountFocus(mainIndex, subIndex, 'amountUSD')}
                       onBlur={() => handleAmountBlur(mainIndex, subIndex, 'amountUSD')}
                       placeholder="Amount (USD)"
-                      disabled={currency === 'INR'}
+                      disabled={disabled || currency === 'INR'}
                     />
                   </td>
                   <td>
@@ -280,7 +353,7 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                       onFocus={() => handleAmountFocus(mainIndex, subIndex, 'amountINR')}
                       onBlur={() => handleAmountBlur(mainIndex, subIndex, 'amountINR')}
                       placeholder="Amount (INR)"
-                      disabled={currency === 'USD'}
+                      disabled={disabled || currency === 'USD'}
                     />
                   </td>
                   <td>
@@ -288,6 +361,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                       className="btn-icon"
                       onClick={() => removeSubService(mainIndex, subIndex)}
                       title="Remove sub-service"
+                      disabled={disabled}
+                      style={{ opacity: disabled ? 0.5 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
                     >
                       ❌
                     </button>
@@ -301,7 +376,8 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
                   <button 
                     onClick={() => addSubService(mainIndex)} 
                     className="btn btn-sm btn-light add-sub-item-btn"
-                    style={{ fontSize: '0.85rem' }}
+                    style={{ fontSize: '0.85rem', opacity: disabled ? 0.5 : 1 }}
+                    disabled={disabled}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
                       <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
@@ -316,7 +392,12 @@ const InvoiceItemsTable = ({ items, setItems, exchangeRate, currency }) => {
       </table>
       
       <div className="table-actions">
-        <button onClick={addMainService} className="btn btn-secondary add-item-btn">
+        <button 
+          onClick={addMainService} 
+          className="btn btn-secondary add-item-btn"
+          disabled={disabled}
+          style={{ opacity: disabled ? 0.5 : 1 }}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
           </svg>

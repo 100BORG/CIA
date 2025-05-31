@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
-import { FiArrowRight, FiUserPlus } from 'react-icons/fi';
+import { useState, useEffect, useRef } from 'react';
+import { FiArrowRight, FiUserPlus, FiUser, FiMail, FiPhone, FiBriefcase, FiLock, FiEye, FiEyeOff, FiSun, FiMoon, FiArrowLeft } from 'react-icons/fi';
 import './LoginPage.css'; // Import the CSS file
+import { supabase } from '../config/supabaseClient';
 
-const LoginPage = ({ onLogin }) => {
+const LoginPage = ({ onLogin, darkMode, toggleDarkMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -12,168 +13,207 @@ const LoginPage = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [formAnimation, setFormAnimation] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
+  
+  // Refs for form fields
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+  const nameRef = useRef(null);
 
-  // Force light mode for login page
+  // Set up animations
   useEffect(() => {
-    // Store the original dark mode state
-    const wasDarkMode = document.body.classList.contains('dark-mode');
-    
-    // Force remove dark mode class while on login page
-    document.body.classList.remove('dark-mode');
-    
-    // Cleanup function to restore original mode when component unmounts
-    return () => {
-      if (wasDarkMode) {
-        document.body.classList.add('dark-mode');
-      }
-    };
+    // Trigger animation after component mounts
+    setTimeout(() => setFadeIn(true), 100);
   }, []);
 
-  const handleSubmit = (e) => {
+  // Effect for managing browser history and popstate
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const newIsRegistering = event.state ? event.state.isRegistering : window.location.hash === '#register';
+      if (isRegistering !== newIsRegistering) {
+        setIsRegistering(newIsRegistering);
+        setError('');
+        setShowPassword(false);
+        setShowConfirmPassword(false);
+        // Trigger form change animation
+        setFormAnimation(true);
+        setTimeout(() => setFormAnimation(false), 500);
+      }
+    };
+
+    // Initial setup based on URL hash
+    const initialIsRegistering = window.location.hash === '#register';
+    if (isRegistering !== initialIsRegistering) {
+        setIsRegistering(initialIsRegistering);
+    }
+    // Ensure history state matches the component state
+    window.history.replaceState({ isRegistering: initialIsRegistering }, '', window.location.href);
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []); // Run once on mount
+
+  // Animation for form switch, now also handles focusing
+  useEffect(() => {
+    if (formAnimation) { // Only run focus logic if formAnimation was triggered
+      setTimeout(() => {
+        if (isRegistering && nameRef.current) {
+          nameRef.current.focus();
+        } else if (!isRegistering && emailRef.current) {
+          emailRef.current.focus();
+        }
+      }, 100); // Delay focus slightly after animation starts
+    }
+  }, [formAnimation, isRegistering]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (isRegistering) {
-      // Handle registration
-      if (!email || !password || !name || !confirmPassword) {
+      if (!email || !password || !confirmPassword || !name) {
         setError('Please fill in all required fields');
         return;
       }
-      
       if (password !== confirmPassword) {
         setError('Passwords do not match');
         return;
       }
-      
       setIsLoading(true);
-      
-      // Check if user already exists
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      const userExists = users.some(user => user.email === email);
-      
-      if (userExists) {
-        setError('User with this email already exists');
+      // Supabase sign up
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            phone,
+            position: position || 'Invoicing Associate',
+            role: 'user',
+          },
+        },
+      });
+      if (signUpError) {
+        setError(signUpError.message);
         setIsLoading(false);
         return;
       }
-      
-      // Add new user with phone and position fields
-      const newUser = {
-        id: `user_${Date.now()}`,
+      // Insert user profile into users table
+      await supabase.from('users').insert({
+        id: data.user.id,
         email,
         name,
         phone,
-        position,
-        password, // In a real app, you'd hash this password
+        position: position || 'Invoicing Associate',
         role: 'user',
-        createdAt: new Date().toISOString()
-      };
-      
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-      
+        created_at: new Date().toISOString(),
+      });
       // Auto-login after registration
-      setTimeout(() => {
-        // Pass the user phone and position during login
-        onLogin(email, newUser.id, newUser.name, phone, position);
-        setIsLoading(false);
-      }, 1000);
-      
+      onLogin(email, data.user.id, name, phone, position || 'Invoicing Associate', 'user');
+      setIsLoading(false);
     } else {
-      // Handle login
+      // Login
       if (!email || !password) {
         setError('Please enter both email and password');
         return;
       }
-      
       setIsLoading(true);
-      
-      // Get users from localStorage
-      const users = JSON.parse(localStorage.getItem('users')) || [];
-      
-      // Support legacy demo login
-      if (email === 'user@example.com' && password === 'password123') {
-        setTimeout(() => {
-          onLogin(email, 'demo_user', 'Demo User', '', 'CEO');
-          setIsLoading(false);
-        }, 1000);
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) {
+        setError(signInError.message);
+        setIsLoading(false);
         return;
       }
-      
-      // Check credentials
-      const user = users.find(u => u.email === email && u.password === password);
-      
-      if (user) {
-        setTimeout(() => {
-          // Pass the user phone and position during login
-          onLogin(email, user.id, user.name, user.phone || '', user.position || '');
-          setIsLoading(false);
-        }, 1000);
-      } else {
-        setError('Invalid email or password');
-        setIsLoading(false);
-      }
-    }
-  };
-
-  const fillDemoCredentials = (e) => {
-    e.preventDefault();
-    
-    // First clear any previous errors
-    setError('');
-    
-    // Update the form fields
-    setEmail('user@example.com');
-    setPassword('password123');
-    
-    // Provide visual feedback that fields were filled
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    
-    if (emailInput && passwordInput) {
-      // Briefly highlight the fields to show they've been filled
-      emailInput.classList.add('highlight-input');
-      passwordInput.classList.add('highlight-input');
-      
-      // Remove highlight after 800ms
-      setTimeout(() => {
-        emailInput.classList.remove('highlight-input');
-        passwordInput.classList.remove('highlight-input');
-      }, 800);
+      // Fetch user profile from users table
+      const { data: userProfile } = await supabase.from('users').select('*').eq('id', data.user.id).single();
+      onLogin(email, data.user.id, userProfile?.name || '', userProfile?.phone || '', userProfile?.position || '', userProfile?.role || 'user');
+      setIsLoading(false);
     }
   };
   
-  const toggleMode = () => {
-    setIsRegistering(!isRegistering);
+  const toggleMode = (e) => {
+    if (e) e.preventDefault(); // Prevent default if called from an event (e.g., <a> tag click)
+
+    const newIsRegistering = !isRegistering;
+    
+    // Update component state first
+    setIsRegistering(newIsRegistering);
     setError('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setFormAnimation(true); // Trigger animation
+    setTimeout(() => setFormAnimation(false), 500);
+
+
+    // Then update browser history
+    if (newIsRegistering) {
+      window.history.pushState({ isRegistering: true }, 'Create Account', '#register');
+    } else {
+      // Going back to login, remove #register from URL
+      // Check current hash to avoid pushing same state if already on login page without hash
+      if (window.location.hash === '#register') {
+        window.history.pushState({ isRegistering: false }, 'Sign In', window.location.pathname);
+      } else {
+        // If already on login page (no hash), replace state to ensure it's correct
+        window.history.replaceState({ isRegistering: false}, 'Sign In', window.location.pathname);
+      }
+    }
   };
 
   return (
-    <div className="login-page-light-mode">
+    <div className={`login-page-light-mode ${fadeIn ? 'fade-in' : ''} ${darkMode ? 'dark-mode' : ''}`}>
+      <div className="theme-switch-wrapper login-theme-switch">
+        <label className="theme-switch">
+          <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+          <span className="slider">
+            <span className="sun-icon"><FiSun /></span>
+            <span className="moon-icon"><FiMoon /></span>
+          </span>
+        </label>
+      </div>
       <div className="login-container">
-        <div className="login-card">
+        <div className={`login-card ${formAnimation ? 'form-change' : ''}`}>
           {/* Left Content */}
           <div className="login-content">
             <div className="brand">
-              <div className="brand-dots">
-                <div className="dot dot-black"></div>
-                <div className="dot dot-gray"></div>
-                <div className="dot dot-yellow"></div>
+              <div className="brand-logo">
+                <div className="brand-dots">
+                  <div className="dot dot-black"></div>
+                  <div className="dot dot-gray"></div>
+                  <div className="dot dot-yellow"></div>
+                </div>
               </div>
               <span className="brand-name">Sama Tributa Solutions</span>
             </div>
             
-            <h1 className="login-title">{isRegistering ? 'Create Account' : 'Invoice Generator'}</h1>
+            <h1 className="login-title">{isRegistering ? 'Create Account' : 'Welcome Back'}</h1>
+            <p className="login-subtitle">
+              {isRegistering 
+                ? 'Register to access our invoice generation system' 
+                : 'Access the invoice generator with your account'}
+            </p>
             
-            <form onSubmit={handleSubmit}>
-              {error && <div className="error-message">{error}</div>}
-              
+            {error && <div className="error-message">{error}</div>}
+            
+            <form onSubmit={handleSubmit} className="login-form">
               {isRegistering && (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="name">Full Name *</label>
+                  <label className="form-label" htmlFor="name">
+                    <FiUser className="input-icon" />
+                    Full Name *
+                  </label>
                   <input
                     type="text"
                     id="name"
+                    ref={nameRef}
                     placeholder="Enter your full name"
                     className="form-input"
                     value={name}
@@ -184,10 +224,14 @@ const LoginPage = ({ onLogin }) => {
               )}
               
               <div className="form-group">
-                <label className="form-label" htmlFor="email">Email *</label>
+                <label className="form-label" htmlFor="email">
+                  <FiMail className="input-icon" />
+                  Email Address *
+                </label>
                 <input
                   type="email"
                   id="email"
+                  ref={emailRef}
                   placeholder="Enter your email address"
                   className="form-input"
                   value={email}
@@ -199,7 +243,10 @@ const LoginPage = ({ onLogin }) => {
               {isRegistering && (
                 <>
                   <div className="form-group">
-                    <label className="form-label" htmlFor="phone">Phone Number</label>
+                    <label className="form-label" htmlFor="phone">
+                      <FiPhone className="input-icon" />
+                      Phone Number
+                    </label>
                     <input
                       type="tel"
                       id="phone"
@@ -211,7 +258,10 @@ const LoginPage = ({ onLogin }) => {
                   </div>
                   
                   <div className="form-group">
-                    <label className="form-label" htmlFor="position">Position/Title</label>
+                    <label className="form-label" htmlFor="position">
+                      <FiBriefcase className="input-icon" />
+                      Position/Title
+                    </label>
                     <input
                       type="text"
                       id="position"
@@ -225,68 +275,107 @@ const LoginPage = ({ onLogin }) => {
               )}
               
               <div className="form-group">
-                <label className="form-label" htmlFor="password">Password *</label>
-                <input
-                  type="password"
-                  id="password"
-                  placeholder="Enter your password"
-                  className="form-input"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
+                <label className="form-label" htmlFor="password">
+                  <FiLock className="input-icon" />
+                  Password *
+                </label>
+                <div className="password-input-wrapper">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    id="password"
+                    ref={passwordRef}
+                    placeholder="Enter your password"
+                    className="form-input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="password-toggle-btn"
+                    onClick={() => setShowPassword(!showPassword)}
+                    tabIndex="-1"
+                  >
+                    {showPassword ? <FiEyeOff /> : <FiEye />}
+                  </button>
+                </div>
               </div>
               
               {isRegistering && (
                 <div className="form-group">
-                  <label className="form-label" htmlFor="confirmPassword">Confirm Password *</label>
-                  <input
-                    type="password"
-                    id="confirmPassword"
-                    placeholder="Confirm your password"
-                    className="form-input"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                  />
+                  <label className="form-label" htmlFor="confirmPassword">
+                    <FiLock className="input-icon" />
+                    Confirm Password *
+                  </label>
+                  <div className="password-input-wrapper">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      id="confirmPassword"
+                      placeholder="Confirm your password"
+                      className="form-input"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                    />
+                    <button 
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex="-1"
+                    >
+                      {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                    </button>
+                  </div>
                 </div>
               )}
               
-              {!isRegistering && (
-                <a href="#" className="forgot-link">Forgot Password ?</a>
-              )}
-              
-              <button 
-                type="submit" 
-                className="login-button" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'LOADING...' : (isRegistering ? 'REGISTER' : 'LOGIN')} {!isLoading && <FiArrowRight />}
-              </button>
-              
-              {!isRegistering && (
-                <a href="#" className="demo-link" onClick={fillDemoCredentials}>
-                  Fill demo credentials
-                </a>
-              )}
-              
-              <div className="mode-toggle">
-                {isRegistering ? 'Already have an account?' : "Don't have an account?"} 
-                <a href="#" onClick={toggleMode}>
-                  {isRegistering ? 'Login' : 'Register now'}
-                </a>
+              <div className="form-actions">
+                {!isRegistering && (
+                  <div className="remember-forgot">
+                    <div className="remember-me">
+                      <input type="checkbox" id="rememberMe" />
+                      <label htmlFor="rememberMe">Remember me</label>
+                    </div>
+                    <a href="#" className="forgot-link">Forgot Password?</a>
+                  </div>
+                )}
+                
+                <button 
+                  type="submit" 
+                  className="login-button" 
+                  disabled={isLoading}
+                >
+                  <span className="button-text">
+                    {isLoading ? 'PROCESSING...' : (isRegistering ? 'CREATE ACCOUNT' : 'SIGN IN')}
+                  </span>
+                  {!isLoading && <FiArrowRight className="button-icon" />}
+                  <div className={`spinner ${isLoading ? 'active' : ''}`}></div>
+                </button>
+                
+                <div className="mode-toggle">
+                  {isRegistering ? 'Already have an account?' : "Don't have an account?"} 
+                  <a href="#" onClick={toggleMode} className="toggle-link">
+                    {isRegistering ? 'Sign in' : 'Create account'}
+                  </a>
+                </div>
               </div>
             </form>
           </div>
           
           {/* Right Image */}
           <div className="login-image">
+            <div className="image-overlay">
+            </div>
             <img 
-              src="https://v3.fal.media/files/koala/mCAx4qKIsxgRSmqzm7th4.png" 
+              src="https://niceillustrations.com/wp-content/uploads/2023/02/cartoon-invoice-768x768.png" 
               alt="Person using laptop" 
               className="illustration"
             />
           </div>
+        </div>
+        
+        <div className="login-footer">
+          <p>&copy; {new Date().getFullYear()} Sama Tributa Solutions. All rights reserved.</p>
         </div>
       </div>
     </div>

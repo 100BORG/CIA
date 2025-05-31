@@ -5,11 +5,27 @@ import InvoiceForm from '../components/InvoiceForm';
 import InvoicePreview from '../components/InvoicePreview';
 import invoiceLogic from '../lib/invoiceLogic';
 import { defaultLogo, companyName } from '../assets/logoData';
+import { useUserRole } from '../context/UserRoleContext';
+import Modal from '../components/Modal';
+import { supabase } from '../config/supabaseClient';
 
 const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [showPreview, setShowPreview] = useState(false);
+  const { isAdmin } = useUserRole();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showBackModal, setShowBackModal] = useState(false);
+  const [pendingBack, setPendingBack] = useState(false);
+  const [lastSavedInvoice, setLastSavedInvoice] = useState(null);
+  
+  // Get current user ID and information
+  const currentUserId = localStorage.getItem('userId');
+  const currentUserName = localStorage.getItem('userName');
+  const currentUserRole = localStorage.getItem('userRole');
+  const currentUserPosition = localStorage.getItem('userPosition');
+  const isInvoicingAssociate = !isAdmin && currentUserPosition === 'Invoicing Associate';
   
   // Get the selected company from localStorage if available
   const [selectedCompany, setSelectedCompany] = useState(() => {
@@ -19,8 +35,8 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
   
   // Define initial state
   const initialInvoiceData = {
-    // Pass false to avoid incrementing the counter until we actually save
-    invoiceNumber: invoiceLogic.generateInvoiceNumber(selectedCompany?.name, false),
+    // Use recipientName for invoice number prefix
+    invoiceNumber: invoiceLogic.generateInvoiceNumber('', false),
     invoiceDate: new Date().toISOString().split('T')[0],
     senderName: selectedCompany?.name || companyName,
     senderAddress: selectedCompany?.address || '',
@@ -54,149 +70,76 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
         type: 'main'
       }
     ],
-    // Bank details
-    accountName: selectedCompany?.bankDetails?.accountName || '',
-    bankName: selectedCompany?.bankDetails?.bankName || '',
-    accountNumber: selectedCompany?.bankDetails?.accountNumber || '',
-    ifscCode: selectedCompany?.bankDetails?.ifscCode || ''
+    // Bank details - prefilled with requested values
+    accountName: 'Samatributa Solutions LLP',
+    bankName: 'Yes Bank Limited',
+    accountNumber: '1111111',
+    ifscCode: '11111',
+    // Assignee information - assign to admin or invoicing associate if creating the invoice
+    assigneeId: isAdmin ? currentUserId : (isInvoicingAssociate ? currentUserId : ''),
+    assigneeName: isAdmin ? currentUserName : (isInvoicingAssociate ? currentUserName : ''),
+    assigneeRole: isAdmin ? currentUserRole : (isInvoicingAssociate ? currentUserRole : ''),
+    assigneePosition: isAdmin ? currentUserPosition : (isInvoicingAssociate ? currentUserPosition : '')
   };
   
   const [invoiceData, setInvoiceData] = useState(initialInvoiceData);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Generate invoice number on load OR load existing invoice if id is provided
+  // Fetch invoice from Supabase
   useEffect(() => {
-    // Check if we're editing an existing invoice
-    if (id && id !== 'new') {
-      // Load the existing invoice data
-      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
-      
-      // Log for debugging purposes
-      console.log('Loading invoice with ID:', id);
-      
-      // Find invoice by unique ID (primary lookup method)
-      const existingInvoice = savedInvoices.find(invoice => invoice.id === id);
-      
-      if (existingInvoice) {
-        console.log('Found existing invoice by ID:', existingInvoice.invoiceNumber);
-        
-        // Process items to ensure they have the correct structure
-        const processedItems = (existingInvoice.items || []).map(item => {
-          // Determine which property to use for sub-services (standardize on subServices)
-          const sourceSubServices = item.subServices || item.nestedRows || [];
-          
-          // Process subServices recursively to ensure they have the correct structure
-          const processedSubServices = sourceSubServices.map(subService => {
-            return {
-              id: subService.id || `subitem-${Math.random().toString(36).substr(2, 9)}`,
-              name: subService.name || '',
-              description: subService.description || '',
-              amountUSD: parseFloat(subService.amountUSD) || 0,
-              amountINR: parseFloat(subService.amountINR) || 0
-            };
-          });
-          
-          // For backward compatibility, check if this is a main service or a direct service item
-          const isMainService = item.type === 'main' || Array.isArray(sourceSubServices);
-          
-          // Ensure all item properties exist
-          return {
-            id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
-            name: item.name || '',
-            description: item.description || '',
-            amountUSD: parseFloat(item.amountUSD) || 0,
-            amountINR: parseFloat(item.amountINR) || 0,
-            // Always use the processed subServices and explicitly remove nestedRows to avoid confusion
-            subServices: isMainService ? processedSubServices : [],
-            // Ensure type is properly set
-            type: isMainService ? 'main' : (item.type || 'main')
-          };
-        });
-        
-        console.log('Processed invoice items:', processedItems);
-        
-        // If no items exist, add a default empty item
-        if (processedItems.length === 0) {
-          processedItems.push({
-            id: `item-${Math.random().toString(36).substr(2, 9)}`,
-            name: '',
-            description: '',
-            amountUSD: 0,
-            amountINR: 0,
-            subServices: [],
-            type: 'main'
-          });
-        }
-        
-        // Set loaded company if the invoice has a companyId
-        if (existingInvoice.companyId) {
-          const companies = JSON.parse(localStorage.getItem('userCompanies')) || [];
-          const invoiceCompany = companies.find(c => c.id === existingInvoice.companyId);
-          if (invoiceCompany && invoiceCompany.id !== selectedCompany?.id) {
-            setSelectedCompany(invoiceCompany);
-          }
-        }
-        
-        // Extract the stored calculation values and ensure they're numeric
-        const {
-          subtotalUSD = 0,
-          subtotalINR = 0,
-          taxAmountUSD = 0,
-          taxAmountINR = 0,
-          totalUSD = 0,
-          totalINR = 0,
-          exchangeRate = 82,
-          taxRate = 18
-        } = existingInvoice;
-        
-        // Create a deep copy of the existing invoice with all necessary properties
-        const loadedInvoice = {
-          // Set default values first to ensure all expected properties exist
-          ...initialInvoiceData,
-          // Then apply all existing invoice data
-          ...existingInvoice,
-          // Explicitly set the processed items to ensure proper structure
-          items: processedItems,
-          // Explicitly set the calculation values as numbers to ensure consistency
-          subtotalUSD: parseFloat(subtotalUSD) || 0,
-          subtotalINR: parseFloat(subtotalINR) || 0,
-          taxAmountUSD: parseFloat(taxAmountUSD) || 0,
-          taxAmountINR: parseFloat(taxAmountINR) || 0,
-          totalUSD: parseFloat(totalUSD) || 0,
-          totalINR: parseFloat(totalINR) || 0,
-          exchangeRate: parseFloat(exchangeRate) || 82,
-          taxRate: parseFloat(taxRate) || 18
-        };
-        
-        // Use setTimeout to ensure state updates happen after the current execution cycle
-        // This helps prevent race conditions when loading service items
-        setTimeout(() => {
-          // Apply the loaded invoice to state
-          setInvoiceData(loadedInvoice);
-          
-          console.log('Loaded invoice with calculations:', {
-            subtotalUSD: loadedInvoice.subtotalUSD,
-            subtotalINR: loadedInvoice.subtotalINR,
-            taxAmountUSD: loadedInvoice.taxAmountUSD,
-            taxAmountINR: loadedInvoice.taxAmountINR,
-            totalUSD: loadedInvoice.totalUSD,
-            totalINR: loadedInvoice.totalINR
-          });
-        }, 0);
-        
-        return; // Exit early, don't generate a new invoice number
-      } else {
-        console.log('Invoice not found with ID:', id);
-        
-        // Invoice not found, show error and redirect
+    if (!id || id === 'new') {
+      setIsAuthorized(true);
+      setIsLoading(false);
+      return;
+    }
+    const fetchInvoice = async () => {
+      const { data, error } = await supabase.from('invoices').select('*').eq('id', id).single();
+      if (error || !data) {
         alert('Invoice not found.');
         navigate('/dashboard');
         return;
       }
+      // Authorization logic (admin or assigned user)
+      console.log('Admin check:', { isAdmin, currentUserId, assigneeId: data.assigneeId });
+      const isUserAuthorized = Boolean(isAdmin) || data.assigneeId === currentUserId;
+      if (!isUserAuthorized) {
+        alert("You don't have permission to view this invoice. Only the assigned client can access it.");
+        navigate('/dashboard');
+        return;
+      }
+      setInvoiceData(data);
+      setIsAuthorized(true);
+      setIsLoading(false);
+    };
+    fetchInvoice();
+  // REMOVED initialInvoiceData and selectedCompany from dependencies
+  }, [id, navigate, isAdmin, currentUserId]);
+
+  // Track last saved invoice data for unsaved changes detection
+  useEffect(() => {
+    setLastSavedInvoice(invoiceData);
+  }, []); // On mount, treat initial as saved
+
+  // Helper: check if invoice is saved (shallow compare main fields)
+  const isInvoiceSaved = () => {
+    if (!lastSavedInvoice) return false;
+    return JSON.stringify(invoiceData) === JSON.stringify(lastSavedInvoice);
+  };
+
+  // Save and update lastSavedInvoice
+  const handleSaveAndGoBack = () => {
+    saveInvoice();
+    setLastSavedInvoice(invoiceData);
+    navigate('/dashboard');
+  };
+
+  // Back button click handler
+  const handleBackClick = () => {
+    if (isInvoiceSaved()) {
+      navigate('/dashboard');
+    } else {
+      setShowBackModal(true);
     }
-  // This effect should only run once when the component mounts, not on every render
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, navigate]); // Only include id and navigate in the dependency array to prevent re-triggering
+  };
 
   // Format date for input field (YYYY-MM-DD)
   const formatDateForInput = (date) => {
@@ -227,124 +170,63 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     setShowPreview(false);
   };
 
-  // Save invoice to localStorage
-  const saveInvoice = () => {
-    // Check if invoice number is empty and needs to be generated
-    if (!invoiceData.invoiceNumber.trim()) {
-      // Generate a new invoice number using the company name, but don't save the increment yet
-      const newInvoiceNumber = invoiceLogic.generateInvoiceNumber(invoiceData.senderName, false);
-      
-      // Set the new invoice number
-      setInvoiceData(prevData => ({
-        ...prevData,
-        invoiceNumber: newInvoiceNumber
-      }));
-      
-      // Return early - we'll let the state update and then save
-      setTimeout(() => saveInvoice(), 100);
+  // Save invoice to Supabase
+  const saveInvoice = async () => {
+    if (!isAuthorized) {
+      alert("You don't have permission to edit this invoice.");
       return;
     }
-
-    // Validate invoice has required fields
     if (!invoiceData.invoiceNumber || !invoiceData.invoiceDate || !invoiceData.senderName) {
       alert('Please fill in required fields: Invoice Number, Date, and Company Name');
       return;
     }
-
     setIsLoading(true);
-
-    try {
-      // Get existing invoices from localStorage or initialize empty array
-      const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
-      
-      // Now that we're actually saving, generate the final invoice number with increment
-      // Only regenerate if we're creating a new invoice (not editing an existing one)
-      let finalInvoiceNumber = invoiceData.invoiceNumber;
-      if (!invoiceData.id) {
-        finalInvoiceNumber = invoiceLogic.generateInvoiceNumber(invoiceData.senderName, true);
-      }
-      
-      // Process the items to ensure correct structure before saving
-      const processedItems = invoiceData.items.map(item => {
-        // Make sure we're handling sub-services properly
-        const processedSubServices = (item.subServices || []).map(subService => ({
-          id: subService.id || `subitem-${Math.random().toString(36).substr(2, 9)}`,
-          name: subService.name || '',
-          description: subService.description || '',
-          amountUSD: parseFloat(subService.amountUSD) || 0,
-          amountINR: parseFloat(subService.amountINR) || 0
-        }));
-        
-        return {
-          id: item.id || `item-${Math.random().toString(36).substr(2, 9)}`,
-          name: item.name || '',
-          description: item.description || '',
-          amountUSD: parseFloat(item.amountUSD) || 0,
-          amountINR: parseFloat(item.amountINR) || 0,
-          // Always use subServices and not nestedRows to ensure consistency
-          subServices: processedSubServices,
-          type: item.type || 'main'
-        };
-      });
-      
-      console.log('Saving invoice with processed items:', processedItems);
-      
-      // Check if this invoice already has an ID (existing invoice)
-      let invoiceToSave = {
-        ...invoiceData,
-        // Use the final invoice number with increment
-        invoiceNumber: finalInvoiceNumber,
-        // Ensure processed items are used
-        items: processedItems,
-        // Ensure calculation values are numbers
-        subtotalUSD: parseFloat(invoiceData.subtotalUSD) || 0,
-        subtotalINR: parseFloat(invoiceData.subtotalINR) || 0,
-        taxAmountUSD: parseFloat(invoiceData.taxAmountUSD) || 0,
-        taxAmountINR: parseFloat(invoiceData.taxAmountINR) || 0,
-        totalUSD: parseFloat(invoiceData.totalUSD) || 0,
-        totalINR: parseFloat(invoiceData.totalINR) || 0,
-        // Ensure companyId is explicitly set from the selected company
-        companyId: selectedCompany?.id || invoiceData.companyId,
-        timestamp: new Date().getTime(),
-        status: invoiceData.status || 'Pending' // Set default status if not already set
-      };
-      
-      // If no ID exists, generate one
-      if (!invoiceToSave.id) {
-        invoiceToSave.id = invoiceLogic.generateUniqueId();
-      }
-      
-      // Check if invoice with this ID already exists
-      const existingInvoiceIndex = savedInvoices.findIndex(
-        invoice => invoice.id === invoiceToSave.id
-      );
-      
-      // Either update existing invoice or add new one
-      if (existingInvoiceIndex >= 0) {
-        savedInvoices[existingInvoiceIndex] = invoiceToSave;
-      } else {
-        savedInvoices.push(invoiceToSave);
-      }
-      
-      // Save updated invoices array back to localStorage
-      localStorage.setItem('savedInvoices', JSON.stringify(savedInvoices));
-      
-      setIsLoading(false);
-      alert('Invoice saved successfully!');
-      
-      // Navigate back to dashboard 
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error saving invoice:', error);
-      setIsLoading(false);
-      alert('Failed to save invoice. Please try again.');
+    let result;
+    if (invoiceData.id) {
+      // Update existing invoice
+      result = await supabase.from('invoices').update({ ...invoiceData }).eq('id', invoiceData.id);
+    } else {
+      // Add new invoice
+      result = await supabase.from('invoices').insert([{ ...invoiceData }]);
     }
+    setIsLoading(false);
+    if (result.error) {
+      alert(result.error.message);
+      return;
+    }
+    alert('Invoice saved successfully!');
+    navigate('/dashboard');
   };
 
   const resetForm = () => {
+    if (!isAuthorized) {
+      alert("You don't have permission to edit this invoice.");
+      return;
+    }
+    
     if (window.confirm('Are you sure you want to create a new invoice? All current data will be lost.')) {
       const today = new Date();
-      
+      // Assign to admin or invoicing associate
+      const assignmentInfo = isAdmin
+        ? {
+            assigneeId: currentUserId,
+            assigneeName: currentUserName,
+            assigneeRole: currentUserRole,
+            assigneePosition: currentUserPosition
+          }
+        : isInvoicingAssociate
+        ? {
+            assigneeId: currentUserId,
+            assigneeName: currentUserName,
+            assigneeRole: currentUserRole,
+            assigneePosition: currentUserPosition
+          }
+        : {
+            assigneeId: '',
+            assigneeName: '',
+            assigneeRole: '',
+            assigneePosition: ''
+          };
       setInvoiceData({
         id: '', // Reset the unique ID
         invoiceNumber: '', // Leave empty for user to fill in or auto-generate on save
@@ -356,11 +238,11 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
         companyId: selectedCompany?.id || null, // Store the company ID for linking to company
         senderAddress: selectedCompany?.address || '', // Populate company address
         senderGSTIN: selectedCompany?.gstin || '', // Populate company GSTIN
-        // Bank details from the company
-        accountName: selectedCompany?.bankDetails?.accountName || '',
-        bankName: selectedCompany?.bankDetails?.bankName || '',
-        accountNumber: selectedCompany?.bankDetails?.accountNumber || '',
-        ifscCode: selectedCompany?.bankDetails?.ifscCode || '',
+        // Bank details - prefilled with requested values
+        accountName: 'Samatributa Solutions LLP',
+        bankName: 'Yes Bank Limited',
+        accountNumber: '1111111',
+        ifscCode: '11111',
         recipientName: '',
         recipientEmail: '',
         recipientAddress: '',
@@ -383,35 +265,34 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
         taxAmountUSD: 0,
         taxAmountINR: 0,
         totalUSD: 0,
-        totalINR: 0
+        totalINR: 0,
+        // Include assignee information based on user type
+        ...assignmentInfo
       });
     }
   };
 
-  // Delete the current invoice
-  const deleteInvoice = () => {
-    if (window.confirm('Are you sure you want to delete this invoice? This action cannot be undone.')) {
-      try {
-        // Get existing invoices from localStorage
-        const savedInvoices = JSON.parse(localStorage.getItem('savedInvoices')) || [];
-        
-        // Filter out the current invoice using the unique ID
-        const updatedInvoices = savedInvoices.filter(
-          invoice => invoice.id !== invoiceData.id
-        );
-        
-        // Save updated invoices array back to localStorage
-        localStorage.setItem('savedInvoices', JSON.stringify(updatedInvoices));
-        
-        // Trigger a custom event to notify other components about the change
-        window.dispatchEvent(new Event('invoicesUpdated'));
-        
-        // Navigate back to dashboard
-        navigate('/dashboard');
-      } catch (error) {
-        console.error('Error deleting invoice:', error);
-        alert('Failed to delete invoice. Please try again.');
+  // Delete the current invoice (move to bin)
+  const deleteInvoice = async () => {
+    if (!isAdmin && invoiceData.assigneeId !== currentUserId) {
+      alert("You don't have permission to delete this invoice.");
+      return;
+    }
+    if (window.confirm('Are you sure you want to delete this invoice?')) {
+      const deletedAt = new Date().toISOString();
+      const deletedBy = currentUserId;
+      const { data, error } = await supabase.from('invoices').update({ deletedAt, deletedBy }).eq('id', invoiceData.id).select();
+      console.log('Delete invoice result:', { data, error, deletedAt, deletedBy, id: invoiceData.id });
+      if (error) {
+        alert('Failed to delete invoice: ' + error.message);
+        return;
       }
+      if (!data || !data.length) {
+        alert('No invoice was updated. Please check if the invoice exists and try again.');
+        return;
+      }
+      alert('Invoice moved to bin.');
+      navigate('/dashboard');
     }
   };
 
@@ -490,29 +371,68 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
     };
   }, [invoiceData.companyId, selectedCompany, setInvoiceData, defaultLogo]);
 
+  // If still loading, show a loading screen
+  if (isLoading && id && id !== 'new') {
+    return (
+      <div className="loading-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', zIndex: 1000 }}>
+        <div className="spinner"></div>
+        <span style={{ marginTop: '20px', color: 'white' }}>Loading invoice...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="container">
       {!showPreview && (
         <header className="header">
+          <button 
+            className="back-btn"
+            onClick={handleBackClick}
+            style={{
+              background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', marginRight: 12, color: '#888', position: 'relative', top: 2
+            }}
+            title="Back to Dashboard"
+          >
+            {/* Back arrow icon instead of 'x' */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
           <div className="logo" onClick={() => navigate('/dashboard')} style={{ cursor: 'pointer' }}>
             <img 
               src={selectedCompany?.logo || defaultLogo} 
               alt={selectedCompany?.name || companyName}
               style={{ maxHeight: '40px' }}
             />
-            {selectedCompany?.name || companyName}
+            <span className="company-name-header-text">{selectedCompany?.name || companyName}</span>
           </div>
-          <div className="user-actions">
-            <button 
-              onClick={toggleDarkMode} 
-              className="btn btn-secondary"
-              title={darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-              style={{ padding: '8px 15px' }}
-            >
-              {darkMode ? '☀️' : '🌙'}
-            </button>
-            <button onClick={() => navigate('/profile')} className="btn btn-secondary">Profile</button>
-            <button onClick={onLogout} className="btn">Logout</button>
+          <div className="user-actions" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            {/* Save Invoice button styled like the bottom one */}
+            {isAuthorized && (
+              <button 
+                onClick={saveInvoice} 
+                className="btn modern-invoice-form"
+                disabled={isLoading}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600, borderRadius: 24 }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '5px' }}>
+                  <path d="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v7.293l2.646-2.647a.5.5 0 0 1 .708.708l-3.5 3.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L7.5 9.293V2a1 1 0 0 0-1-1H2z"/>
+                </svg>
+                {isLoading ? 'Saving...' : 'Save Invoice'}
+              </button>
+            )}
+            {/* Modern theme toggle switch like login page */}
+            <div className="theme-switch-wrapper">
+              <label className="theme-switch">
+                <input type="checkbox" checked={darkMode} onChange={toggleDarkMode} />
+                <span className="slider">
+                  <span className="sun-icon" style={{ color: '#f59e0b' }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="currentColor"/><g stroke="currentColor" strokeWidth="2"><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></g></svg>
+                  </span>
+                  <span className="moon-icon" style={{ color: '#6366f1' }}>
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z" fill="currentColor"/></svg>
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
         </header>
       )}
@@ -535,6 +455,7 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
           isLoading={isLoading}
           setIsLoading={setIsLoading}
           id={id}
+          isAuthorized={isAuthorized}
         />
       )}
       
@@ -544,6 +465,19 @@ const InvoicePage = ({ onLogout, darkMode, toggleDarkMode }) => {
           <span>Processing...</span>
         </div>
       )}
+      <Modal
+        isOpen={showBackModal}
+        onClose={() => setShowBackModal(false)}
+        title="You have not saved the invoice"
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={() => { setShowBackModal(false); navigate('/dashboard'); }}>Go Back</button>
+            <button className="btn btn-primary" onClick={handleSaveAndGoBack}>Save Invoice</button>
+          </>
+        }
+      >
+        <p>You have not saved the invoice. Would you like to save before leaving?</p>
+      </Modal>
     </div>
   );
 };
